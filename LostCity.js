@@ -41643,6 +41643,7 @@ var ENTRANA_ZOMBIE_ID = 76;
 var DRAYNOR_BANK = new Tile(3093, 3243, 0);
 var KNIFE_SPAWN = new Tile(3224, 3202, 0);
 var BOB_AXES = { npc: "Bob", anchor: new Tile(3232, 3203, 0) };
+var AEMAD_AXES = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
 var SHAMUS_TREE = new Tile(3138, 3212, 0);
 var PORT_SARIM_MONK = new Tile(3046, 3235, 0);
 var ENTRANA_LANDING = new Tile(2834, 3334, 0);
@@ -41749,13 +41750,13 @@ function sourceMainlandAxe(snap) {
   if (axe) {
     return withdraw([{ name: axe, qty: 1 }]);
   }
-  if ((snap.inv.get("coins") ?? 0) < 100) {
+  if ((snap.inv.get("coins") ?? 0) < 200) {
     if (banked(snap, "Coins") > 0) {
       return withdraw([{ name: "Coins", qty: Math.min(1000, banked(snap, "Coins")) }]);
     }
-    return { kind: "wait", reason: "need coins for an axe from Bob" };
+    return { kind: "wait", reason: "need coins for an iron axe from Aemad" };
   }
-  return { kind: "buy", item: "Bronze axe", qty: 1, shop: BOB_AXES, estGp: 100 };
+  return { kind: "buy", item: "Iron axe", qty: 1, shop: AEMAD_AXES, estGp: 200 };
 }
 function entranaKeep() {
   const food = selectedFood()?.toLowerCase();
@@ -42038,7 +42039,7 @@ async function sailToEntrana(log) {
   }, 30000);
 }
 function mainlandTools(snap) {
-  return sourceKnife(snap) ?? sourceMainlandAxe(snap);
+  return sourceMainlandAxe(snap) ?? sourceKnife(snap);
 }
 function travelToDungeon(snap) {
   const area = lostCityArea(snap.tile);

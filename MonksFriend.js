@@ -40774,7 +40774,9 @@ var QUESTS = [
     name: "Monk's Friend",
     questPoints: 1,
     requirements: {},
-    items: []
+    items: [
+      { name: "Iron axe", qty: 1, kind: "acquirable" }
+    ]
   },
   {
     id: "eadgar",
@@ -41821,7 +41823,7 @@ var BLANKET_SPAWN = new Tile(2570, 9604, 0);
 var SINK = new Tile(2610, 3195, 0);
 var TREE = new Tile(2613, 3252, 0);
 var KHAZARD_SHOP = { npc: "Shop keeper", anchor: new Tile(2641, 3171, 0) };
-var ARDOUGNE_SHOP = { npc: "Kortan", anchor: new Tile(2615, 3292, 0) };
+var ARDOUGNE_SHOP = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
 var HOPS = [
   { stand: RING_STAND, locName: "Ladder", op: "Climb-down", arrive: CAVE_FOOT },
   { stand: CAVE_LADDER, locName: "Ladder", op: "Climb-up", arrive: new Tile(2561, 3222, 0) }
@@ -42052,6 +42054,9 @@ var monksfriend = {
   hops: HOPS,
   food: 6,
   tools: [BLANKET.toLowerCase(), "jug", "logs", "axe", "coins"],
+  gather: {
+    "iron axe": (_snap, need) => ({ kind: "buy", item: "Iron axe", qty: need, shop: ARDOUGNE_SHOP, estGp: 200 })
+  },
   readStage: readMonksFriendStage,
   decide
 };
