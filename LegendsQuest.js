@@ -41459,6 +41459,7 @@ var LQ_BANK = {
   SHILO: new Tile(2852, 2954, 0)
 };
 var LQ_SHOP = {
+  AEMAD: { npc: "Aemad", anchor: new Tile(2613, 3293, 0) },
   JIMINUA: { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) },
   MAGIC_GUILD: { npc: "Magic Store owner", anchor: new Tile(2595, 3087, 1) }
 };
@@ -41468,6 +41469,7 @@ var LQ_TILE = {
   RADIMUS_HALL: new Tile(2724, 3378, 0),
   GUILD_DOORS: new Tile(2729, 3372, 0),
   CUPBOARD: new Tile(2724, 3369, 0),
+  PAPYRUS_TABLE: new Tile(2726, 3367, 0),
   JUNGLE_MOUTH: new Tile(2816, 2940, 0),
   JUNGLE_INSIDE: new Tile(2816, 2936, 0),
   FORESTER: new Tile(2817, 2942, 0),
@@ -43418,6 +43420,7 @@ var FOOD_CARRY = 14;
 var COIN_CARRY = 5000;
 var COIN_FLOOR = 1000;
 var SHOP_GP = {
+  AEMAD: 800,
   JIMINUA: 3000,
   MAGIC_GUILD: 12000
 };
@@ -43670,13 +43673,18 @@ function sourcePickaxe(snap, bank) {
   return { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: LQ_SHOP.JIMINUA, estGp: SHOP_GP.JIMINUA, bank };
 }
 var JIMINUA_KIT = [
-  { item: { id: LQ_ID.PAPYRUS, name: LQ_ITEM.PAPYRUS }, qty: 8 },
   { item: { id: LQ_ID.CHARCOAL, name: LQ_ITEM.CHARCOAL }, qty: 8 },
   { item: { id: LQ_ID.KNIFE, name: LQ_ITEM.KNIFE }, qty: 1 },
   { item: { id: LQ_ID.ROPE, name: LQ_ITEM.ROPE }, qty: 1 },
   { item: { id: LQ_ID.HAMMER, name: LQ_ITEM.HAMMER }, qty: 1 },
   { item: { id: LQ_ID.CHISEL, name: LQ_ITEM.CHISEL }, qty: 1 },
   { item: { id: LQ_ID.VIAL_WATER, name: LQ_ITEM.VIAL_WATER }, qty: 1 }
+];
+var AEMAD_PAPYRUS = [
+  { item: { id: LQ_ID.PAPYRUS, name: LQ_ITEM.PAPYRUS }, qty: 8, stock: 8 }
+];
+var CHARCOAL_KIT = [
+  { item: { id: LQ_ID.CHARCOAL, name: LQ_ITEM.CHARCOAL }, qty: 6 }
 ];
 var RUNE_KIT = [
   { item: { id: LQ_ID.SOUL_RUNE, name: LQ_ITEM.SOUL_RUNE }, qty: 1, stock: 2 },
@@ -43763,7 +43771,7 @@ function sourceGoldBars(snap, bank) {
   return { kind: "mineRock", rock: "Gold", item: "Gold ore", qty: 1, anchor: LQ_TILE.GOLD_ROCKS };
 }
 var COUNTERS = [
-  { shop: LQ_SHOP.MAGIC_GUILD, estGp: SHOP_GP.MAGIC_GUILD, bank: LQ_BANK.YANILLE, kit: [...RUNE_KIT, ...ORB_RUNE_KIT] },
+  { shop: LQ_SHOP.AEMAD, estGp: SHOP_GP.AEMAD, bank: LQ_BANK.ARDOUGNE, kit: AEMAD_PAPYRUS },
   { shop: LQ_SHOP.JIMINUA, estGp: SHOP_GP.JIMINUA, bank: LQ_BANK.SHILO, kit: JIMINUA_KIT }
 ];
 var PROVISION_GIVE_UP = 3;
@@ -45600,6 +45608,42 @@ async function takeMachete(log) {
     expect: () => heldId(LQ_ID.MACHETE) > 0
   }, log);
 }
+async function takePapyrus(log) {
+  if (heldId(LQ_ID.PAPYRUS) > 0) {
+    return true;
+  }
+  if (!await enterGuild(log)) {
+    return false;
+  }
+  if (!await Traversal.walkResilient(LQ_TILE.PAPYRUS_TABLE, { radius: 2, attempts: 3, timeoutMs: 120000, log })) {
+    return false;
+  }
+  await settleScene();
+  const before = heldId(LQ_ID.PAPYRUS);
+  const paper = GroundItems.query().where((item) => item.id === LQ_ID.PAPYRUS).within(10).nearest();
+  if (!paper) {
+    log("no papyrus on Radimus' table — Aemad stocks it in East Ardougne");
+    return false;
+  }
+  if (!await paper.interact("Take")) {
+    return false;
+  }
+  log("took papyrus from Radimus' table");
+  return Execution.delayUntil(() => heldId(LQ_ID.PAPYRUS) > before, 8000);
+}
+function sourcePapyrus(snap, qty = 6) {
+  if (owned(snap, LQ_ID.PAPYRUS) >= qty) {
+    return null;
+  }
+  const drawn = fromBank(snap, { id: LQ_ID.PAPYRUS, name: LQ_ITEM.PAPYRUS }, qty);
+  if (drawn) {
+    return drawn;
+  }
+  if (held(snap, LQ_ID.PAPYRUS) === 0 && (snap.noProgress ?? 0) < 2) {
+    return { kind: "custom", name: "take papyrus from Radimus' table", run: takePapyrus };
+  }
+  return source(snap, { id: LQ_ID.PAPYRUS, name: LQ_ITEM.PAPYRUS }, qty, LQ_SHOP.AEMAD, SHOP_GP.AEMAD, LEG_BANK.guild);
+}
 var HAND_IN_PREFER = ["Yes", "Ok"];
 async function handInTotem(log) {
   if (!await enterGuild(log)) {
@@ -46040,7 +46084,7 @@ function potsFor(snap, stage) {
 }
 var BLESS_POTS = 2;
 function stageStart(snap) {
-  return inTheOpen(snap, provision(snap) ?? step("ask Radimus Erkle for the quest", startQuest));
+  return inTheOpen(snap, step("ask Radimus Erkle for the quest", startQuest));
 }
 function stageMapping(snap) {
   if (held(snap, LQ_ID.MAP_COMPLETE) > 0) {
@@ -46050,7 +46094,7 @@ function stageMapping(snap) {
     const machete = { id: LQ_ID.MACHETE, name: LQ_ITEM.MACHETE };
     return inTheOpen(snap, fromBank(snap, machete, 1) ?? step("take the machete from Radimus' cupboard", takeMachete));
   }
-  const kit = legendsArea(snap.tile) === "mainland" ? fromShop(snap, CHOP_KIT) ?? fromShop(snap, MAP_KIT) : null;
+  const kit = legendsArea(snap.tile) === "mainland" ? fromShop(snap, CHOP_KIT) ?? sourcePapyrus(snap, 6) ?? fromShop(snap, CHARCOAL_KIT) : null;
   if (kit) {
     return kit;
   }
@@ -46075,7 +46119,7 @@ function regainRoarer(snap) {
   if (held(snap, LQ_ID.MAP) === 0) {
     return step("buy a replacement map from Radimus", replaceMap);
   }
-  return fromShop(snap, MAP_KIT) ?? step("redraw the map of the Kharazi Jungle", mapJungle);
+  return sourcePapyrus(snap, 6) ?? fromShop(snap, CHARCOAL_KIT) ?? step("redraw the map of the Kharazi Jungle", mapJungle);
 }
 function stageBullroarer(snap) {
   if (held(snap, LQ_ID.BULLROARER) === 0) {

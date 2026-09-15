@@ -44034,11 +44034,18 @@ function grindQuicklime(log) {
   return grind(RG_ITEM.QUICKLIME.id, RG_ITEM.QUICKLIME_DUST.id, log);
 }
 async function heatQuicklime(log) {
+  const area = regicideArea(Game.tile());
+  const before = heldId(RG_ITEM.QUICKLIME.id);
+  if (area === "tirannwn") {
+    if (!await walkTo(RG_TILE.FURNACE, 2, RG_STAGE.SPOKEN_IORWERTH2, log)) {
+      return false;
+    }
+    return useHeldOnLoc(RG_ITEM.LIMESTONE.id, [RG_LOC.FURNACE], () => heldId(RG_ITEM.QUICKLIME.id) > before, log);
+  }
   if (!await Traversal.walkResilient(RG_TILE.ARDOUGNE_FURNACE, { radius: 2, attempts: 3, timeoutMs: 300000, log })) {
     return false;
   }
-  const before = heldId(RG_ITEM.QUICKLIME.id);
-  return useHeldOnLoc(RG_ITEM.LIMESTONE.id, [RG_LOC.FURNACE, RG_LOC.FURNACE_MAIN, RG_LOC.FURNACE_SIDE], () => heldId(RG_ITEM.QUICKLIME.id) > before, log);
+  return useHeldOnLoc(RG_ITEM.LIMESTONE.id, [RG_LOC.FURNACE_MAIN, RG_LOC.FURNACE_SIDE], () => heldId(RG_ITEM.QUICKLIME.id) > before, log);
 }
 function rabbitNear() {
   return Npcs.query().where((npc) => npc.id === RG_NPC.RABBIT || npc.id === 1193 || npc.id === 1194).action("Attack").within(14).nearest();
@@ -46313,6 +46320,7 @@ var KIT2 = [
   { item: RG_ITEM.SPADE, qty: 1, reason: "the filled-in tunnel out of the slave cages" },
   { item: RG_ITEM.SHARK, qty: FOOD_TARGET2, reason: "the traps, the soldiers and the elf warriors", min: 1 }
 ];
+var SPADE_ARDOUGNE = new Tile(2574, 3331, 0);
 var KEEP_IDS2 = Object.values(RG_ITEM).map((item) => item.id);
 var RETURN_IDS = new Set([
   RG_ITEM.SPADE.id,
@@ -46331,6 +46339,9 @@ function sourceKit(snap, kit = KIT2) {
     const drawn = fromBank(snap, supply.item, supply.qty);
     if (drawn) {
       return drawn;
+    }
+    if (supply.item.id === RG_ITEM.SPADE.id) {
+      return { kind: "grabGround", item: RG_ITEM.SPADE.name, anchor: SPADE_ARDOUGNE, waitIfMissing: true };
     }
     if (supply.shop && supply.estGp !== undefined) {
       return buyOrWait(snap, {
@@ -46438,6 +46449,9 @@ function gatherLeg(snap) {
   }
   if (!quicklimeDone(snap) && held2(snap, RG_ITEM.QUICKLIME) === 0 && held2(snap, RG_ITEM.LIMESTONE) === 0) {
     return nearQuarry(snap.tile) ? { kind: "mineRock", rock: "Limestone", item: RG_ITEM.LIMESTONE.name, qty: 1, anchor: RG_TILE.QUARRY } : custom("cross out to the Arandar quarry", (log) => leaveTirannwn(RG_TILE.QUARRY, snap.stage ?? RG_STAGE.SPOKEN_IORWERTH2, log));
+  }
+  if (!quicklimeDone(snap)) {
+    return held2(snap, RG_ITEM.QUICKLIME) === 0 ? custom("burn the limestone at the Tyras camp furnace", heatQuicklime) : custom("grind the quicklime into a pot", grindQuicklime);
   }
   return null;
 }
