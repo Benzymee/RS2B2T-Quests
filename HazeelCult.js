@@ -41832,9 +41832,9 @@ var CERIL_RETURN = {
   prefer: []
 };
 var VALVES = [
+  { id: 2846, op: "Turn-left", tile: new Tile(2585, 3245, 0) },
   { id: 2844, op: "Turn-right", tile: new Tile(2562, 3247, 0) },
   { id: 2845, op: "Turn-right", tile: new Tile(2572, 3263, 0) },
-  { id: 2846, op: "Turn-left", tile: new Tile(2585, 3245, 0) },
   { id: 2847, op: "Turn-right", tile: new Tile(2597, 3263, 0) },
   { id: 2848, op: "Turn-right", tile: new Tile(2609, 3243, 0) }
 ];
