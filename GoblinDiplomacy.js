@@ -40487,9 +40487,9 @@ var QUESTS = [
     questPoints: 5,
     requirements: {},
     items: [
-      { name: "Goblin mail", qty: 3, kind: "acquirable" },
       { name: "Orange dye", qty: 1, kind: "acquirable" },
-      { name: "Blue dye", qty: 1, kind: "acquirable" }
+      { name: "Blue dye", qty: 1, kind: "acquirable" },
+      { name: "Goblin mail", qty: 3, kind: "acquirable" }
     ]
   },
   {
@@ -42377,14 +42377,14 @@ function goblinDiplomacyItems(snap) {
   const filled = (accounted.orange ? 1 : 0) + (accounted.blue ? 1 : 0);
   const remainingPlain = Math.max(0, 3 - filled);
   const items = [];
-  if (plain < remainingPlain) {
-    items.push({ name: "Goblin mail", qty: remainingPlain, kind: "acquirable" });
-  }
   if (!accounted.orange) {
     items.push({ name: "Orange dye", qty: 1, kind: "acquirable" });
   }
   if (!accounted.blue) {
     items.push({ name: "Blue dye", qty: 1, kind: "acquirable" });
+  }
+  if (plain < remainingPlain) {
+    items.push({ name: "Goblin mail", qty: remainingPlain, kind: "acquirable" });
   }
   return items;
 }
@@ -42516,82 +42516,109 @@ async function farmGoblinMail(log) {
   log(`Goblin ${index} did not die in time`);
   return false;
 }
-async function makeBlueDye(log) {
-  if (Inventory.contains("Blue dye")) {
+function dyeIngredientOrder() {
+  const here = Game.tile();
+  if (!here) {
+    return ["redberries", "woad", "onions"];
+  }
+  const toWyson = FALADOR_PARK_SHED.distanceTo(here);
+  const toWydin = PORT_SARIM_SHOP.anchor.distanceTo(here);
+  return toWyson <= toWydin ? ["woad", "redberries", "onions"] : ["redberries", "woad", "onions"];
+}
+async function buyWoadLeaves(log) {
+  if (woadLeavesHeld() >= 2 || Inventory.contains("Blue dye")) {
     return true;
   }
-  if (woadLeavesHeld() < 2) {
-    if (Inventory.count("Coins") < 20) {
-      log("need ~20 coins for woad leaves");
-      return false;
-    }
-    let wyson = findWyson();
-    if (!wyson || wyson.distance() > WYSON.leash) {
-      log("walking to Wyson the gardener at the Falador Park shed");
-      if (!await Traversal.walkResilient(FALADOR_PARK_SHED, { radius: 6, attempts: 4, timeoutMs: 180000, log })) {
-        return false;
-      }
-      wyson = findWyson();
-    }
-    if (!wyson) {
-      log("waiting for Wyson the gardener by the park shed");
-      await Execution.delayUntil(() => findWyson() !== null, 20000);
-      wyson = findWyson();
-    }
-    if (!wyson) {
-      log("no Wyson the gardener in Falador Park");
-      return false;
-    }
-    if (wyson.distance() > 1) {
-      await DirectNavigator.walkTo(wyson.tile(), 1, 20000);
-    }
-    const name = wyson.name ?? WYSON.npc;
-    await talkThrough(name, WYSON.prefer, log);
+  if (Inventory.count("Coins") < 20) {
+    log("need ~20 coins for woad leaves");
     return false;
+  }
+  let wyson = findWyson();
+  if (!wyson || wyson.distance() > WYSON.leash) {
+    log("walking to Wyson the gardener at the Falador Park shed");
+    if (!await Traversal.walkResilient(FALADOR_PARK_SHED, { radius: 6, attempts: 4, timeoutMs: 180000, log })) {
+      return false;
+    }
+    wyson = findWyson();
+  }
+  if (!wyson) {
+    log("waiting for Wyson the gardener by the park shed");
+    await Execution.delayUntil(() => findWyson() !== null, 20000);
+    wyson = findWyson();
+  }
+  if (!wyson) {
+    log("no Wyson the gardener in Falador Park");
+    return false;
+  }
+  if (wyson.distance() > 1) {
+    await DirectNavigator.walkTo(wyson.tile(), 1, 20000);
+  }
+  const name = wyson.name ?? WYSON.npc;
+  await talkThrough(name, WYSON.prefer, log);
+  return woadLeavesHeld() >= 2;
+}
+async function aggieMake(stop, product, log) {
+  if (Inventory.contains(product)) {
+    return true;
   }
   if (Inventory.count("Coins") < 5) {
-    log("need ~5 coins for blue dye");
+    log(`need ~5 coins for ${product.toLowerCase()}`);
     return false;
   }
-  if (!await gotoNpc(AGGIE_BLUE, [], log)) {
+  if (!await gotoNpc(stop, [], log)) {
     return false;
   }
-  await talkThrough(AGGIE_BLUE.npc, AGGIE_BLUE.prefer, log);
-  return Execution.delayUntil(() => Inventory.contains("Blue dye"), 8000);
+  await talkThrough(stop.npc, stop.prefer, log);
+  return Execution.delayUntil(() => Inventory.contains(product), 8000);
 }
-async function makeOrangeDye(log) {
-  if (Inventory.contains("Orange dye")) {
+async function makeAllDyes(log) {
+  const needOrange = !Inventory.contains("Orange dye") && !Inventory.contains("Orange goblin mail");
+  const needBlue = !Inventory.contains("Blue dye") && !Inventory.contains("Blue goblin mail");
+  if (!needOrange && !needBlue) {
     return true;
   }
-  if (!Inventory.contains("Red dye")) {
-    if (Inventory.count("Redberries") < 3) {
-      return executeStep({ kind: "buy", item: "Redberries", qty: 3, shop: PORT_SARIM_SHOP, estGp: 60 }, [], log);
+  for (const ingredient of dyeIngredientOrder()) {
+    if (ingredient === "woad" && needBlue && woadLeavesHeld() < 2 && !Inventory.contains("Blue dye")) {
+      if (!await buyWoadLeaves(log)) {
+        return false;
+      }
     }
-    if (Inventory.count("Coins") < 5) {
-      log("need ~5 coins for red dye");
-      return false;
+    if (ingredient === "redberries" && needOrange && Inventory.count("Redberries") < 3 && !Inventory.contains("Red dye") && !Inventory.contains("Orange dye")) {
+      if (!await executeStep({ kind: "buy", item: "Redberries", qty: 3, shop: PORT_SARIM_SHOP, estGp: 60 }, [], log)) {
+        return false;
+      }
     }
-    if (!await gotoNpc(AGGIE_RED, [], log)) {
-      return false;
+    if (ingredient === "onions" && needOrange && Inventory.count("Onion") < 2 && !Inventory.contains("Yellow dye") && !Inventory.contains("Orange dye")) {
+      if (!await executeStep({ kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_PATCH }, [], log)) {
+        return false;
+      }
     }
-    await talkThrough(AGGIE_RED.npc, AGGIE_RED.prefer, log);
-    return false;
   }
-  if (!Inventory.contains("Yellow dye")) {
-    if (Inventory.count("Onion") < 2) {
-      return executeStep({ kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_PATCH }, [], log);
-    }
-    if (Inventory.count("Coins") < 5) {
-      log("need ~5 coins for yellow dye");
+  if (needOrange && !Inventory.contains("Red dye") && !Inventory.contains("Orange dye")) {
+    if (!await aggieMake(AGGIE_RED, "Red dye", log)) {
       return false;
     }
-    if (!await gotoNpc(AGGIE_YELLOW, [], log)) {
-      return false;
-    }
-    await talkThrough(AGGIE_YELLOW.npc, AGGIE_YELLOW.prefer, log);
-    return false;
   }
-  return executeStep({ kind: "useOn", item: "Red dye", targetKind: "item", target: "Yellow dye", anchor: AGGIE_ANCHOR, product: "Orange dye" }, [], log);
+  if (needOrange && !Inventory.contains("Yellow dye") && !Inventory.contains("Orange dye")) {
+    if (!await aggieMake(AGGIE_YELLOW, "Yellow dye", log)) {
+      return false;
+    }
+  }
+  if (needBlue && !Inventory.contains("Blue dye")) {
+    if (!await aggieMake(AGGIE_BLUE, "Blue dye", log)) {
+      return false;
+    }
+  }
+  if (needOrange && !Inventory.contains("Orange dye") && Inventory.contains("Red dye") && Inventory.contains("Yellow dye")) {
+    return executeStep({ kind: "useOn", item: "Red dye", targetKind: "item", target: "Yellow dye", anchor: AGGIE_ANCHOR, product: "Orange dye" }, [], log);
+  }
+  return (!needOrange || Inventory.contains("Orange dye")) && (!needBlue || Inventory.contains("Blue dye"));
+}
+async function makeBlueDye(log) {
+  return makeAllDyes(log);
+}
+async function makeOrangeDye(log) {
+  return makeAllDyes(log);
 }
 async function stepOutOfGoblinCombat(log) {
   if (!Game.inCombat()) {
@@ -42712,8 +42739,8 @@ var goblindiplomacy = {
   items: goblinDiplomacyItems,
   gather: {
     "goblin mail": goblinMailGatherStep,
-    "orange dye": () => ({ kind: "custom", name: "make orange dye", run: makeOrangeDye }),
-    "blue dye": () => ({ kind: "custom", name: "make blue dye", run: makeBlueDye })
+    "orange dye": () => ({ kind: "custom", name: "collect dye ingredients then make dyes at Aggie", run: makeAllDyes }),
+    "blue dye": () => ({ kind: "custom", name: "collect dye ingredients then make dyes at Aggie", run: makeAllDyes })
   },
   decide
 };

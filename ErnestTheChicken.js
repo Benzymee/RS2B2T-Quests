@@ -42373,14 +42373,14 @@ function kit(snap) {
 // src/bot/api/ai/quests/defs/ernest/index.ts
 var talk = (stop) => ({ kind: "talk", stop });
 function parts(snap) {
-  if (heldId(snap, EC_ID.RUBBER_TUBE) === 0) {
-    return { kind: "custom", name: "fetch the rubber tube", run: fetchRubberTube };
-  }
   if (heldId(snap, EC_ID.OIL_CAN) === 0) {
     return { kind: "custom", name: "fetch the oil can", run: fetchOilCan };
   }
   if (heldId(snap, EC_ID.PRESSURE_GAUGE) === 0) {
     return { kind: "custom", name: "fetch the pressure gauge", run: fetchPressureGauge };
+  }
+  if (heldId(snap, EC_ID.RUBBER_TUBE) === 0) {
+    return { kind: "custom", name: "fetch the rubber tube", run: fetchRubberTube };
   }
   return talk(ODDENSTEIN);
 }

@@ -42143,6 +42143,7 @@ var TRAIBORN = {
 var WIZ_INSIDE_STAND = new Tile(3105, 3160, 0);
 var DRAIN_TILE = new Tile(3225, 3495, 0);
 var SINK_TILE = new Tile(3224, 3494, 0);
+var CASTLE_BUCKET = new Tile(3224, 3497, 1);
 var MANHOLE_TILE = new Tile(3237, 3458, 0);
 var SEWER_LAND = new Tile(3237, 9858, 0);
 var SEWER_KEY = new Tile(3225, 9897, 0);
@@ -42178,10 +42179,29 @@ function buyOrWait(snap, step) {
   return step;
 }
 function fillBucket(snap) {
-  if (has(snap, "bucket")) {
+  if (has(snap, "bucket") || has(snap, "bucket of water")) {
     return { kind: "useOn", item: "Bucket", targetKind: "loc", target: "Sink", anchor: SINK_TILE, product: "Bucket of water" };
   }
-  return buyOrWait(snap, { kind: "buy", item: "Bucket", qty: 1, shop: VARROCK_GENERAL, estGp: 15 });
+  return { kind: "custom", name: "take the castle kitchen bucket", run: grabCastleBucket };
+}
+async function grabCastleBucket(log) {
+  if (Inventory.contains("Bucket") || Inventory.contains("Bucket of water")) {
+    return true;
+  }
+  log("looking for the bucket upstairs in the castle kitchen");
+  if (!await Traversal.walkResilient(CASTLE_BUCKET, { radius: 2, attempts: 3, timeoutMs: 90000, log })) {
+    return false;
+  }
+  const bucket = GroundItems.query().name("Bucket").within(12).nearest();
+  if (bucket) {
+    const before = Inventory.count("Bucket");
+    if (!await bucket.interact("Take")) {
+      return false;
+    }
+    return Execution.delayUntil(() => Inventory.count("Bucket") > before, 6000);
+  }
+  log("no castle bucket on the floor — buying one from the Varrock general store");
+  return executeStep({ kind: "buy", item: "Bucket", qty: 1, shop: VARROCK_GENERAL, estGp: 15 }, [], log);
 }
 async function grindGoblins(log) {
   if (Inventory.count("Bones") >= BONES_NEEDED) {
@@ -42296,7 +42316,7 @@ async function drainLeg(log) {
     }
     return false;
   }
-  await executeStep({ kind: "buy", item: "Bucket", qty: 1, shop: VARROCK_GENERAL, estGp: 15 }, [], log);
+  await grabCastleBucket(log);
   return false;
 }
 async function keyHunt(log) {
@@ -42329,6 +42349,9 @@ async function keyHunt(log) {
     }
     await talkThrough("Captain Rovin", ROVIN.prefer, log);
     return Execution.delayUntil(() => heldId(ROVIN_KEY_ID), 6000);
+  }
+  if (!hasDrain) {
+    return drainLeg(log);
   }
   if (!hasTraiborn) {
     const level = Game.tile()?.level ?? 0;
