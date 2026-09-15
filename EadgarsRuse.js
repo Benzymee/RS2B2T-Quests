@@ -43839,16 +43839,16 @@ function decide2(snap) {
   }
   switch (stage) {
     case EADGAR_STAGE.NOT_STARTED:
-      return prep() ?? { kind: "talk", stop: SANFEW_START };
+      return prep() ?? sourcePestle(snap) ?? { kind: "talk", stop: SANFEW_START };
     case EADGAR_STAGE.STARTED:
-      return prep() ?? guardedTalk(EADGAR_TALK);
+      return prep() ?? sourcePestle(snap) ?? sourceTinderbox(snap) ?? guardedTalk(EADGAR_TALK);
     case EADGAR_STAGE.SPOKE_EADGAR:
       return prep() ?? guardedTalk(BURNTMEAT_TALK);
     case EADGAR_STAGE.SPOKE_BURNTMEAT_FIRST:
     case EADGAR_STAGE.SPOKE_BURNTMEAT:
       return prep() ?? guardedTalk(EADGAR_TALK);
     case EADGAR_STAGE.NEEDS_PARROT:
-      return prep() ?? sourceAxe(snap) ?? sourceParrot(snap) ?? guardedTalk(EADGAR_TALK);
+      return prep(scarecrowSlots(snap, stage) > SCARECROW_SLOT_SLACK ? SCARECROW_FOOD_TARGET : undefined) ?? sourceAxe(snap) ?? sourceParrot(snap) ?? sourceVial(snap) ?? sourceScarecrow(snap, stage) ?? guardedTalk(EADGAR_TALK);
     case EADGAR_STAGE.EXPLAINED_PLAN:
       return prep() ?? parrotInHand(snap) ?? guarded("hide the parrot under the prison rack", hideParrot);
     case EADGAR_STAGE.HID_PARROT:

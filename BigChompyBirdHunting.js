@@ -43470,6 +43470,9 @@ var CB_TILE = {
 };
 var BOB_AXES = { npc: "Bob", anchor: new Tile(3232, 3203, 0) };
 var GERRANT = { npc: "Gerrant", anchor: new Tile(3013, 3225, 0) };
+var AEMAD_AXES = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
+var ARDOUGNE_CHICKENS = new Tile(2691, 3273, 0);
+var CHICKEN_NPC_ID = 41;
 var RANTZ = {
   npc: CB_NPC.RANTZ,
   anchor: CB_TILE.RANTZ,
@@ -43630,7 +43633,7 @@ function loadoutStep(snap, wantAxe = true) {
     return withdraw(wants);
   }
   if (wantAxe && heldAxe(snap) === null) {
-    return { kind: "buy", item: "Bronze axe", qty: 1, shop: BOB_AXES, estGp: 100 };
+    return { kind: "buy", item: "Iron axe", qty: 1, shop: AEMAD_AXES, estGp: 100 };
   }
   return null;
 }
@@ -43654,6 +43657,43 @@ function toolStep(snap) {
 function toolsHeld(snap) {
   return heldId(snap, CB_ID.KNIFE) > 0 && heldId(snap, CB_ID.CHISEL) > 0;
 }
+async function gatherFeathers(qty, log) {
+  for (let attempt = 0; attempt < 80; attempt++) {
+    if (Inventory.countById(CB_ID.FEATHER) >= qty) {
+      return true;
+    }
+    const drop = GroundItems.query().name(CB_NAME.FEATHER).within(12).nearest();
+    if (drop) {
+      const before = Inventory.countById(CB_ID.FEATHER);
+      if (await drop.interact("Take") && await Execution.delayUntil(() => Inventory.countById(CB_ID.FEATHER) > before, 8000)) {
+        continue;
+      }
+    }
+    const here = Game.tile();
+    if (!here || ARDOUGNE_CHICKENS.distanceTo(here) > 10) {
+      if (!await walkTo(ARDOUGNE_CHICKENS, 5, log)) {
+        return false;
+      }
+      continue;
+    }
+    if (Game.inCombat()) {
+      await Execution.delayUntil(() => !Game.inCombat(), 60000);
+      continue;
+    }
+    const target = Npcs.query().where((n) => n.id === CHICKEN_NPC_ID && !n.inCombat && !n.targetsAnotherPlayer()).action("Attack").within(12).nearest()
+      ?? Npcs.query().name("Chicken").action("Attack").within(12).nearest();
+    if (!target) {
+      await Execution.delayTicks(3);
+      continue;
+    }
+    if (!await target.interact("Attack")) {
+      continue;
+    }
+    await Execution.delayUntil(() => GroundItems.query().name(CB_NAME.FEATHER).within(12).nearest() !== null || !target.valid(), 60000);
+  }
+  log(`could not gather ${qty} feathers from the Ardougne chickens`);
+  return Inventory.countById(CB_ID.FEATHER) >= qty;
+}
 function feathersStep(snap, want) {
   const have2 = heldId(snap, CB_ID.FEATHER);
   if (have2 >= want) {
@@ -43671,7 +43711,7 @@ function feathersStep(snap, want) {
   if (fromBank > 0) {
     return withdraw([{ name: CB_NAME.FEATHER, qty: fromBank, id: CB_ID.FEATHER }]);
   }
-  return { kind: "buy", item: CB_NAME.FEATHER, qty: short, shop: GERRANT, estGp: short * 4 };
+  return { kind: "custom", name: `kill Ardougne chickens for ${short} feathers`, run: (log) => gatherFeathers(want, log) };
 }
 
 // src/bot/api/ai/quests/defs/chompybird/arrows.ts

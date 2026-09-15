@@ -41731,6 +41731,8 @@ var TILE = {
   DENULTH: new Tile(2896, 3528, 0),
   DUNSTAN: new Tile(2919, 3574, 0),
   TENZING: new Tile(2820, 3556, 0),
+  TENZING_BACK: new Tile(2820, 3558, 0),
+  SECRET_ROCKS: new Tile(2864, 3608, 0),
   DAD: new Tile(2911, 3612, 0),
   ARENA_GATE: new Tile(2896, 3618, 0),
   GENERAL: new Tile(2831, 10086, 2),
@@ -42368,7 +42370,33 @@ async function buyBoots(log) {
   await talkChoosingBy(TENZING_BOOTS.npc, TENZING_DONE_RULES, TENZING_BOOTS.prefer, log);
   return Execution.delayUntil(() => Inventory.count(ITEM.CLIMBING_BOOTS) > before, 8000);
 }
+async function viaSecretWay(log) {
+  const zone = trollZone(Game.tile());
+  if (zone === "arena" || zone === "mountain" || zone === "stronghold" || zone === "trollPass") {
+    return true;
+  }
+  if (zone !== "secretWay") {
+    if (!await walkTo(TILE.TENZING, 3, log)) {
+      return false;
+    }
+    if (!await walkTo(TILE.TENZING_BACK, 2, log)) {
+      return false;
+    }
+    const door = Locs.query().name("Door").within(6).nearest();
+    if (door) {
+      await door.interact("Open");
+      await Execution.delayTicks(2);
+    }
+  }
+  if (!await walkTo(TILE.SECRET_ROCKS, 3, log)) {
+    return false;
+  }
+  return walkTo(TILE.ARENA_GATE, 3, log);
+}
 async function fightDad(log) {
+  if (!await viaSecretWay(log)) {
+    return false;
+  }
   if (!await walkTo(TILE.DAD, 6, log)) {
     return false;
   }

@@ -43117,6 +43117,7 @@ var GERRANT = { npc: "Gerrant", anchor: new Tile(3013, 3225, 0) };
 var ARDOUGNE_BAKER = { npc: "Baker", anchor: new Tile(2669, 3310, 0) };
 var BARB_LURE = new Tile(3104, 3430, 0);
 var BARB_FIRE = new Tile(3079, 3444, 0);
+var BARB_IRON = new Tile(3081, 3421, 0);
 var TROUT_QTY = 10;
 var BREAD_QTY = 10;
 var FEATHER_BUY = 50;
@@ -43132,7 +43133,11 @@ function sourceIronBar(snap) {
   } catch {
     mining = 1;
   }
-  return ironBarsAt(snap, mining, 1);
+  const step = ironBarsAt(snap, mining, 1);
+  if (step?.kind === "mineRock") {
+    return { ...step, anchor: BARB_IRON };
+  }
+  return step;
 }
 function sourceBread(snap) {
   if (held2(snap, DEATH_ITEM.BREAD.id) >= BREAD_QTY) {
@@ -43187,6 +43192,18 @@ async function cookTrout(log) {
   }
   return Execution.delayUntil(() => live(RAW_TROUT.id) === 0 || live(DEATH_ITEM.TROUT.id) > before, 60000);
 }
+function sourceFishingKit(snap) {
+  if (held2(snap, DEATH_ITEM.TROUT.id) >= TROUT_QTY || held2(snap, RAW_TROUT.id) > 0) {
+    return null;
+  }
+  if (held2(snap, FLY_ROD.id) === 0) {
+    return { kind: "buy", item: FLY_ROD.name, qty: 1, shop: GERRANT, estGp: ROD_GP };
+  }
+  if (held2(snap, FEATHER.id) < 10) {
+    return { kind: "buy", item: FEATHER.name, qty: FEATHER_BUY, shop: GERRANT, estGp: FEATHER_BUY * FEATHER_GP };
+  }
+  return null;
+}
 function sourceTrout(snap) {
   if (held2(snap, DEATH_ITEM.TROUT.id) >= TROUT_QTY) {
     return null;
@@ -43194,11 +43211,9 @@ function sourceTrout(snap) {
   if (held2(snap, RAW_TROUT.id) > 0) {
     return { kind: "custom", name: "cook trout on the Barbarian Village fire", run: cookTrout };
   }
-  if (held2(snap, FLY_ROD.id) === 0) {
-    return { kind: "buy", item: FLY_ROD.name, qty: 1, shop: GERRANT, estGp: ROD_GP };
-  }
-  if (held2(snap, FEATHER.id) < 10) {
-    return { kind: "buy", item: FEATHER.name, qty: FEATHER_BUY, shop: GERRANT, estGp: FEATHER_BUY * FEATHER_GP };
+  const kit = sourceFishingKit(snap);
+  if (kit) {
+    return kit;
   }
   return { kind: "custom", name: "fly-fish trout at Barbarian Village", run: lureTrout };
 }
@@ -43704,7 +43719,7 @@ function decide2(snap) {
   }
   if (stage < DP_STAGE.UNLOCKED_DOOR) {
     if (stage === DP_STAGE.NOT_STARTED || snap.journal === "notStarted") {
-      return normalizePack(snap) ?? sourceCoins(snap, 200) ?? custom("start Death Plateau with Denulth", (log) => talkAt(DENULTH_START, log));
+      return normalizePack(snap) ?? sourceCoins(snap, 200) ?? sourceNamed(snap, DEATH_ITEM.BREAD.name, DEATH_ITEM.BREAD.id, BREAD_QTY) ?? sourceBread(snap) ?? sourceFishingKit(snap) ?? custom("start Death Plateau with Denulth", (log) => talkAt(DENULTH_START, log));
     }
     if (stage === DP_STAGE.STARTED) {
       return custom("ask Eohric about the night guard", (log) => talkAt(EOHRIC_GUARD, log));

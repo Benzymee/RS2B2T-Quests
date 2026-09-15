@@ -41246,7 +41246,8 @@ var DIG_LOC = {
   CHEST_OPEN: 2360,
   CHEST_SHUT: 2361,
   BRICK: 2362,
-  PANNING_POINT: 2363
+  PANNING_POINT: 2363,
+  SPECIMEN_TRAY: 2375
 };
 var DIG_SOIL_IDS = [2376, 2377, 2378];
 var DIG_ZONE = {
@@ -41265,6 +41266,7 @@ var DIG_TILE = {
   PANNING_STAND: new Tile(3379, 3378, 0),
   TRAY_SPAWN_STAND: new Tile(3370, 3378, 0),
   TRAY_SPAWN: new Tile(3369, 3378, 0),
+  SPECIMEN_TRAY: new Tile(3368, 3376, 0),
   BUSH_STAND: new Tile(3358, 3372, 0),
   BARREL_STAND: new Tile(3364, 3377, 0),
   CHEST_STAND: new Tile(3373, 3378, 0),
@@ -42817,6 +42819,42 @@ async function takeSpecimenJar(log) {
   }
   return driveUntilHeld(() => Inventory.countById(DIG_ID.SPECIMEN_JAR) > 0, [], log, 15000);
 }
+var TRAY_MS = 6 * 60000;
+async function searchSpecimenTray(log) {
+  if (Inventory.countById(DIG_ID.CHARCOAL) > 0) {
+    return true;
+  }
+  if (Inventory.countById(DIG_ID.SPECIMEN_JAR) === 0 && !await takeSpecimenJar(log)) {
+    return false;
+  }
+  if (!await walkTo(DIG_TILE.SPECIMEN_TRAY, 1, log)) {
+    return false;
+  }
+  const deadline = performance.now() + TRAY_MS;
+  while (performance.now() < deadline && Inventory.countById(DIG_ID.CHARCOAL) === 0) {
+    if (EventSignal.pending()) {
+      return Inventory.countById(DIG_ID.CHARCOAL) > 0;
+    }
+    await Modals.closeIfOpen();
+    await dropSpoil(log, SPOIL_FREE);
+    await settleScene();
+    const tray = locByIdAction([DIG_LOC.SPECIMEN_TRAY], "Search", 8) ?? Locs.query().name("Specimen tray").action("Search").within(8).nearest();
+    if (!tray) {
+      log("no specimen tray beside the panning tent");
+      await walkTo(DIG_TILE.SPECIMEN_TRAY, 1, log);
+      continue;
+    }
+    if (!await tray.interact("Search")) {
+      await Execution.delayTicks(1);
+      continue;
+    }
+    await Execution.delayUntil(() => Inventory.countById(DIG_ID.CHARCOAL) > 0 || ChatDialog.isOpen() || ChatDialog.canContinue(), 8000);
+    await driveChoice([], log);
+    await Modals.closeIfOpen();
+  }
+  await dropSpoil(log, SPOIL_FREE);
+  return Inventory.countById(DIG_ID.CHARCOAL) > 0;
+}
 var STEAL_SETTLED = /you steal|you find a specimen brush|you fail to pick|stunned/i;
 var PICKPOCKET_MS = 8 * 60000;
 var SPOIL_FREE = 10;
@@ -43028,33 +43066,36 @@ function trowelStep(snap) {
   }
   return fromBank(snap, DIG_ID.TROWEL, DIG_ITEM.TROWEL) ?? replaceTrowel();
 }
-function panningGate(snap) {
-  if (!DigsiteState.teaWanted || heldId(snap, DIG_ID.CUP_OF_TEA) > 0) {
+function teaStep(snap) {
+  if (heldId(snap, DIG_ID.CUP_OF_TEA) > 0) {
     return null;
   }
   return fromBank(snap, DIG_ID.CUP_OF_TEA, DIG_ITEM.CUP_OF_TEA) ?? buy(DIG_ITEM.CUP_OF_TEA, 1, SHOP.TEA, 200);
+}
+function panningGate(snap) {
+  return teaStep(snap);
 }
 function panFor(id, label) {
   return custom(label, (log) => panUntil(() => Inventory.countById(id) > 0, log));
 }
 function firstExamPlan(snap) {
-  if (!answered(snap, "green-answered")) {
-    if (heldId(snap, DIG_ID.ROCK_SAMPLE_GREEN) > 0) {
-      return DELIVER_GREEN();
-    }
-    return custom("pickpocket the workmen for the green student's sample", (log) => pickpocketWorkman(() => Inventory.countById(DIG_ID.ROCK_SAMPLE_GREEN) > 0, log));
+  if (!answered(snap, "green-answered") && heldId(snap, DIG_ID.ROCK_SAMPLE_GREEN) > 0) {
+    return DELIVER_GREEN();
+  }
+  if (!answered(snap, "purple-answered") && heldId(snap, DIG_ID.ROCK_SAMPLE_PURPLE) > 0) {
+    return DELIVER_PURPLE();
+  }
+  if (!answered(snap, "orange-answered") && heldId(snap, DIG_ID.ROCK_SAMPLE_ORANGE) > 0) {
+    return DELIVER_ORANGE();
   }
   if (!answered(snap, "purple-answered")) {
-    if (heldId(snap, DIG_ID.ROCK_SAMPLE_PURPLE) > 0) {
-      return DELIVER_PURPLE();
-    }
     return searchBush();
   }
   if (!answered(snap, "orange-answered")) {
-    if (heldId(snap, DIG_ID.ROCK_SAMPLE_ORANGE) > 0) {
-      return DELIVER_ORANGE();
-    }
     return panningGate(snap) ?? panFor(DIG_ID.ROCK_SAMPLE_ORANGE, "pan the river for the orange student's sample");
+  }
+  if (!answered(snap, "green-answered")) {
+    return custom("pickpocket the workmen for the green student's sample", (log) => pickpocketWorkman(() => Inventory.countById(DIG_ID.ROCK_SAMPLE_GREEN) > 0, log));
   }
   return talkToExaminer("sit the first Earth Sciences exam");
 }
@@ -43156,7 +43197,7 @@ function compoundPlan(snap, underground) {
       if (trowel) {
         return trowel;
       }
-      return fromBank(snap, DIG_ID.CHARCOAL, DIG_ITEM.CHARCOAL) ?? custom("dig the training site for charcoal", (log) => digUntil(DIG_ZONE.TRAINING, () => Inventory.countById(DIG_ID.CHARCOAL) > 0, log));
+      return fromBank(snap, DIG_ID.CHARCOAL, DIG_ITEM.CHARCOAL) ?? custom("search the specimen tray for charcoal", searchSpecimenTray);
     }
     return mixStep("grind the charcoal to a powder", DIG_ID.CHARCOAL, DIG_ID.PESTLE, DIG_ID.GROUND_CHARCOAL);
   }
@@ -43172,7 +43213,7 @@ function plan(snap, stage, underground) {
       return surface(talkToExaminer("ask the Examiner about the Earth Sciences exams"));
     case DIG_STAGE.STAMPING:
       if (heldId(snap, DIG_ID.STAMPED_LETTER) > 0) {
-        return surface(talkToExaminer("hand the stamped letter to the Examiner"));
+        return surface(teaStep(snap) ?? talkToExaminer("hand the stamped letter to the Examiner"));
       }
       if (heldId(snap, DIG_ID.PLAIN_LETTER) > 0) {
         return surface(stampLetter());
