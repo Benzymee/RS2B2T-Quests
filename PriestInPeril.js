@@ -42186,6 +42186,16 @@ async function earlyLeg(log) {
     log("priestperil: attacking Temple guardian");
     await killTarget(dog, /temple guardian/i);
   }
+  if (!await walkTo(TEMPLE_DOOR_OUT, 2, log)) {
+    return false;
+  }
+  const knockAgain = Locs.query().name("Large door").action("Knock-at").within(6).nearest();
+  if (knockAgain && await knockAgain.interact("Knock-at")) {
+    if (await Execution.delayUntil(() => ChatDialog.isOpen() || ChatDialog.canContinue(), 5000)) {
+      log("priestperil: second knock — monks send you back to Roald");
+      await driveDialog(KNOCK_PREFER, log);
+    }
+  }
   if (!await gotoNpc(ROALD, HOPS, log)) {
     return false;
   }

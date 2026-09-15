@@ -43281,6 +43281,12 @@ function decide2(snap) {
   if (wearing) {
     return outside(snap, wearing);
   }
+  if (stage < NS_STAGE.FULL_TRANSFORM && !inSwamp(snap.tile) && !inGrotto(snap.tile)) {
+    const sickleEarly = sickleStep(snap);
+    if (sickleEarly) {
+      return outside(snap, sickleEarly);
+    }
+  }
   if (stage === NS_STAGE.NOT_STARTED) {
     return outside(snap, { kind: "talk", stop: DREZEL });
   }

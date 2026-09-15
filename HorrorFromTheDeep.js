@@ -41628,16 +41628,20 @@ var HD_TILE = {
   SEAWEED: new Tile(2708, 3728, 0),
   SAND_PIT: new Tile(2541, 3103, 0),
   YANILLE_RANGE: new Tile(2550, 3099, 0),
+  CATHERBY_RANGE: new Tile(2817, 3443, 0),
   FURNACE: new Tile(2600, 3310, 0),
+  ARHEIN: new Tile(2803, 3431, 0),
+  HICKTON: new Tile(2821, 3442, 0),
+  BETTY: new Tile(3014, 3258, 0),
   VARROCK_SWORDSHOP: new Tile(3203, 3395, 0),
   VARROCK_ARCHERY: new Tile(3232, 3424, 0),
   VARROCK_RUNES: new Tile(3253, 3401, 0),
   VARROCK_GENERAL: new Tile(3218, 3415, 0)
 };
 var SWORD_SHOP = { npc: "Shop keeper", anchor: HD_TILE.VARROCK_SWORDSHOP };
-var ARCHERY_SHOP = { npc: "Lowe", anchor: HD_TILE.VARROCK_ARCHERY };
-var RUNE_SHOP = { npc: "Aubury", anchor: HD_TILE.VARROCK_RUNES };
-var GENERAL_SHOP = { npc: "Shop keeper", anchor: HD_TILE.VARROCK_GENERAL };
+var ARCHERY_SHOP = { npc: "Hickton", anchor: HD_TILE.HICKTON };
+var RUNE_SHOP = { npc: "Betty", anchor: HD_TILE.BETTY };
+var GENERAL_SHOP = { npc: "Arhein", anchor: HD_TILE.ARHEIN };
 var LARRISSA = {
   npc: "Larrissa",
   anchor: HD_TILE.LARRISSA,
@@ -44498,7 +44502,7 @@ async function useOnLocFrom(stand, itemId, locName, done, log) {
   }
   return Execution.delayUntil(done, 12000);
 }
-var cookSeaweed = (log) => useOnLocFrom(HD_TILE.YANILLE_RANGE, HD_ID.SEAWEED, HD_LOC.RANGE, () => Inventory.countById(HD_ID.SODA_ASH) > 0, log);
+var cookSeaweed = (log) => useOnLocFrom(HD_TILE.CATHERBY_RANGE, HD_ID.SEAWEED, HD_LOC.RANGE, () => Inventory.countById(HD_ID.SODA_ASH) > 0, log);
 var fillSand = (log) => useOnLoc(HD_ID.BUCKET, { name: HD_LOC.SAND_PIT, near: HD_TILE.SAND_PIT }, [], () => Inventory.countById(HD_ID.BUCKET_OF_SAND) > 0, log);
 var smeltGlass = (log) => useOnLocFrom(HD_TILE.FURNACE, HD_ID.BUCKET_OF_SAND, HD_LOC.FURNACE, () => Inventory.countById(HD_ID.MOLTEN_GLASS) > 0, log);
 function moltenGlass(snap) {

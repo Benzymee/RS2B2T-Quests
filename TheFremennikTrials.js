@@ -41283,6 +41283,8 @@ var FT_TILE = {
   FORESTERS_ARMS: new Tile(2690, 3494, 0),
   POISON_SALESMAN: new Tile(2695, 3495, 0),
   ARHEIN: new Tile(2803, 3431, 0),
+  HARRY: new Tile(2833, 3443, 0),
+  CATHERBY_SHORE: new Tile(2845, 3431, 0),
   RUFUS: new Tile(3507, 3497, 0),
   MAZE_LADDER: new Tile(2644, 3658, 0),
   MAZE_ENTRY: new Tile(2631, 10004, 0),
@@ -42170,7 +42172,35 @@ function gatherShark(snap) {
   if (heldId2(snap, FT_ID.RAW_SHARK) > 0) {
     return null;
   }
-  return fromBank(snap, [{ name: "Raw shark", qty: 1, id: FT_ID.RAW_SHARK }]) ?? { kind: "buy", item: "Raw shark", qty: 1, shop: { npc: "Rufus", anchor: FT_TILE.RUFUS }, estGp: 4000 };
+  const bankedShark = fromBank(snap, [{ name: "Raw shark", qty: 1, id: FT_ID.RAW_SHARK }]);
+  if (bankedShark) {
+    return bankedShark;
+  }
+  if ((Skills.level("fishing") ?? 0) >= 76) {
+    if (!held(snap, "Harpoon") && !worn(snap, "Harpoon")) {
+      return fromBank(snap, [{ name: "Harpoon", qty: 1 }]) ?? { kind: "buy", item: "Harpoon", qty: 1, shop: { npc: "Harry", anchor: FT_TILE.HARRY }, estGp: 80 };
+    }
+    return { kind: "custom", name: "harpoon a raw shark at Catherby", run: fishCatherbyShark };
+  }
+  return { kind: "buy", item: "Raw shark", qty: 1, shop: { npc: "Rufus", anchor: FT_TILE.RUFUS }, estGp: 4000 };
+}
+async function fishCatherbyShark(log) {
+  const before = Inventory.countById(FT_ID.RAW_SHARK);
+  if (!await walkTo(FT_TILE.CATHERBY_SHORE, 3, log)) {
+    return false;
+  }
+  const deadline = performance.now() + 180000;
+  while (performance.now() < deadline && Inventory.countById(FT_ID.RAW_SHARK) <= before) {
+    const spot = Npcs.query().name("Fishing spot").action("Harpoon").within(10).nearest();
+    if (!spot) {
+      log("no Harpoon fishing spot on Catherby beach");
+      await Execution.delayTicks(5);
+      continue;
+    }
+    await spot.interact("Harpoon");
+    await Execution.delayUntil(() => Inventory.countById(FT_ID.RAW_SHARK) > before, 20000);
+  }
+  return Inventory.countById(FT_ID.RAW_SHARK) > before;
 }
 var COIN_LUMP = 20000;
 function gatherCoins(snap, need) {
@@ -42318,7 +42348,7 @@ function bardStep(snap) {
     return combine(FT_ID.GOLDEN_WOOL, FT_ID.UNSTRUNG_LYRE, FT_ID.LYRE, "string the lyre with golden wool");
   }
   if (heldId2(snap, FT_ID.GOLDEN_FLEECE) > 0) {
-    return { kind: "custom", name: "spin the fleece at the Seers spinning wheel", run: spinFleece };
+    return seersVillageErrand(snap) ?? { kind: "custom", name: "spin the fleece at the Seers spinning wheel", run: spinFleece };
   }
   if (heldId2(snap, FT_ID.UNSTRUNG_LYRE) === 0) {
     if (heldId2(snap, FT_ID.BRANCH) > 0) {
@@ -42961,6 +42991,35 @@ var KEG_PRICE = 250;
 var BEER_PRICE = 100;
 var CONTEST_WON = /completed the Revellers' trial/i;
 var holding = (id) => Inventory.countById(id) > 0;
+function seersVillageErrand(snap) {
+  const spin = heldId2(snap, FT_ID.GOLDEN_FLEECE) > 0;
+  const keg = hasFlag(snap.progress, "reveller-started") && !hasFlag(snap.progress, "reveller-done") && heldId2(snap, FT_ID.LOW_ALCOHOL_KEG) === 0 && heldId2(snap, FT_ID.BEER_KEG) === 0;
+  if (!spin && !keg) {
+    return null;
+  }
+  if (keg) {
+    const coins = gatherCoins(snap, KEG_PRICE);
+    if (coins) {
+      return coins;
+    }
+  }
+  if (spin && keg) {
+    return { kind: "custom", name: "spin the fleece and buy a low alcohol keg in Seers", run: spinAndBuyKeg };
+  }
+  if (spin) {
+    return { kind: "custom", name: "spin the fleece at the Seers spinning wheel", run: spinFleece };
+  }
+  return { kind: "custom", name: "buy a low alcohol keg (250gp)", run: buyLowAlcoholKeg };
+}
+async function spinAndBuyKeg(log) {
+  if (Inventory.countById(FT_ID.GOLDEN_FLEECE) > 0 && !await spinFleece(log)) {
+    return false;
+  }
+  if (Inventory.countById(FT_ID.LOW_ALCOHOL_KEG) > 0) {
+    return true;
+  }
+  return buyLowAlcoholKeg(log);
+}
 function revellerStep(snap) {
   if (hasFlag(snap.progress, "reveller-done")) {
     return null;
@@ -42974,7 +43033,11 @@ function revellerStep(snap) {
     return { kind: "custom", name: "drink Manni under the table", run: drinkingContest };
   }
   if (!lowAlcohol) {
-    return gatherCoins(snap, KEG_PRICE) ?? { kind: "custom", name: "buy a low alcohol keg (250gp)", run: buyLowAlcoholKeg };
+    const bardNeedsSpinTrip = !hasFlag(snap.progress, "bard-done") && heldId2(snap, FT_ID.GOLDEN_WOOL) === 0 && heldId2(snap, FT_ID.LYRE) === 0 && heldId2(snap, FT_ID.ENCHANTED_LYRE) === 0;
+    if (bardNeedsSpinTrip && heldId2(snap, FT_ID.GOLDEN_FLEECE) === 0) {
+      return null;
+    }
+    return seersVillageErrand(snap) ?? gatherCoins(snap, KEG_PRICE) ?? { kind: "custom", name: "buy a low alcohol keg (250gp)", run: buyLowAlcoholKeg };
   }
   const cracker = heldId2(snap, FT_ID.FIRECRACKER) > 0 || heldId2(snap, FT_ID.FIRECRACKER_LIT) > 0;
   if (!cracker && !snap.inv.has("beer")) {
@@ -43638,7 +43701,7 @@ function readiness() {
   if (Skills.level("prayer") < PROTECT_MELEE_LEVEL) {
     return `The Fremennik Trials wants Prayer ${PROTECT_MELEE_LEVEL} — Koschei's first three forms kill an unarmed character without Protect from Melee`;
   }
-  return "The Fremennik Trials fights a level 69 Draugen and needs a raw shark — bank one, or the bot buys it from Rufus in Canifis";
+  return "The Fremennik Trials fights a level 69 Draugen and needs a raw shark — bank one, harpoon it at Catherby at Fishing 76, or the bot buys it from Rufus in Canifis";
 }
 var fremenniktrials = {
   record: QUESTS.find((r) => r.id === "viking"),

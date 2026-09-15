@@ -43637,6 +43637,7 @@ var SM_TILE = {
   VARROCK_BANK: new Tile(3253, 3420, 0)
 };
 var VARROCK_GENERAL = { npc: "Shop keeper", anchor: new Tile(3218, 3414, 0) };
+var CANIFIS_GENERAL = { npc: "Fidelio", anchor: new Tile(3503, 3477, 0) };
 var SM_NPC = {
   RAZMIRE: "Razmire Keelgan",
   RAZMIRE_AFFLICTED: "Afflicted(Razmire)",
@@ -43854,12 +43855,19 @@ function kit(snap, stage) {
   }
   if (needLogs && bankedId2(snap, SM_ID.LOGS) > 0) {
     items.push({ name: SM_NAME.LOGS, qty: logsShort(snap, stage), id: SM_ID.LOGS });
+  } else if (needLogs) {
+    const axes = ["Bronze axe", "Iron axe", "Steel axe", "Mithril axe", "Adamant axe", "Rune axe"];
+    const holdingAxe = axes.some((name) => (snap.inv.get(name.toLowerCase()) ?? 0) > 0 || (snap.worn.has(name.toLowerCase()) ?? false));
+    const bankedAxe = holdingAxe ? null : axes.find((name) => (snap.bank?.get(name.toLowerCase()) ?? 0) > 0);
+    if (bankedAxe) {
+      items.push({ name: bankedAxe, qty: 1 });
+    }
   }
   if (items.length > 0) {
     return { kind: "withdraw", items };
   }
   if (needTinderbox) {
-    return { kind: "buy", item: SM_NAME.TINDERBOX, qty: 1, shop: VARROCK_GENERAL, estGp: TINDERBOX_GP };
+    return { kind: "buy", item: SM_NAME.TINDERBOX, qty: 1, shop: CANIFIS_GENERAL, estGp: TINDERBOX_GP };
   }
   return null;
 }
@@ -43890,7 +43898,8 @@ function makeAshes(want) {
     if (Bank.isOpen()) {
       await Bank.close();
     }
-    if (!await Traversal.walkResilient(SM_TILE.VARROCK_LOGS, { radius: 2, attempts: 3, timeoutMs: 180000, log })) {
+    const local = await Traversal.walkResilient(SM_TILE.DEAD_TREE, { radius: 2, attempts: 3, timeoutMs: 180000, log });
+    if (!local && !await Traversal.walkResilient(SM_TILE.VARROCK_LOGS, { radius: 2, attempts: 3, timeoutMs: 180000, log })) {
       return false;
     }
     await settleScene();
@@ -43906,6 +43915,13 @@ function makeAshes(want) {
           return false;
         }
         continue;
+      }
+      const tree = Locs.query().name(SM_LOC.DEAD_TREE).action("Chop-down").within(12).nearest() ?? Locs.query().name("Tree").action("Chop-down").within(12).nearest();
+      if (tree) {
+        const before = Inventory.countById(SM_ID.LOGS);
+        if (await tree.interact("Chop-down") && await Execution.delayUntil(() => Inventory.countById(SM_ID.LOGS) > before, 20000)) {
+          continue;
+        }
       }
       const spawn = GroundItems.query().where((g) => g.id === SM_ID.LOGS).within(8).nearest();
       if (!spawn) {
