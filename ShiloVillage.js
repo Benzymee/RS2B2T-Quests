@@ -42959,6 +42959,9 @@ function sourceBones(snap, want) {
   if (inBank > 0) {
     return withdrawFrom([{ name: SV_ITEM.BONES.name, id: SV_ITEM.BONES.id, qty: Math.min(want - carried, inBank) }]);
   }
+  if (snap.tile && snap.tile.x >= 2735 && snap.tile.x <= 3010 && snap.tile.z >= 2870 && snap.tile.z <= 3245) {
+    return { kind: "custom", name: `take ${want - carried} bones from Karamja undead`, run: (log) => gatherJungleBones(want, log) };
+  }
   return { kind: "custom", name: `pick up ${want - carried} bones on the battlefield`, run: (log) => gatherBones(want, log) };
 }
 async function gatherBones(want, log) {
@@ -42979,6 +42982,46 @@ async function gatherBones(want, log) {
       if (!await Execution.delayUntil(() => carried() > before, 5000)) {
         break;
       }
+    }
+  }
+  return carried() >= want;
+}
+async function gatherJungleBones(want, log) {
+  const carried = () => Inventory.items().filter((item) => item.id === SV_ITEM.BONES.id).reduce((n, i2) => n + i2.count, 0);
+  const stands = [SV_TILE.MOSOL_REI, SV_TILE.MOUND_STAND, SV_TILE.TRUFITUS];
+  for (const stand of stands) {
+    if (carried() >= want) {
+      return true;
+    }
+    if (!await Traversal.walkResilient(stand, { radius: 6, attempts: 2, timeoutMs: 120000, log })) {
+      continue;
+    }
+    await settleScene();
+    for (let attempt = 0; attempt < 8 && carried() < want; attempt++) {
+      const pile = GroundItems.query().name(SV_ITEM.BONES.name).within(10).nearest();
+      if (pile) {
+        const before = carried();
+        if (await pile.interact("Take") && await Execution.delayUntil(() => carried() > before, 5000)) {
+          continue;
+        }
+      }
+      const undead = Npcs.query().name(SV_NPC.UNDEAD_ONE).action("Attack").where((n) => !n.targetsAnotherPlayer()).within(12).nearest();
+      if (!undead) {
+        break;
+      }
+      const index = undead.index;
+      if (!await undead.interact("Attack")) {
+        return false;
+      }
+      const deadline = performance.now() + 90000;
+      while (performance.now() < deadline) {
+        await Sustain.run();
+        if (!Npcs.all().some((n) => n.index === index)) {
+          break;
+        }
+        await Execution.delayTicks(1);
+      }
+      await Execution.delayTicks(2);
     }
   }
   return carried() >= want;
