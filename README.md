@@ -1,5 +1,5 @@
-<p align="center"><u><b>ANY PROBLEMS/QUESTIONS ADD .benzyme ON DISCORD</b></u></p>
-<p align="center"><u><b>I'M A LOVELY GUY AND WOULD LOVE TO ANSWER YOUR QUESTIONS</b></u></p>
+<p align="center"><u><b>ANY PROBLEMS/QUESTIONS ADD .benzyme ON DISCORD OR @ ME IN THE RS2B2T DISCORD</b></u></p>
+<p align="center"><u><b>HIGHLY RECCOMEND THE ACCOUNT YOU'LL BE QUESTING ON BE LOADED UP WITH GP</b></u></p>
 
 <p align="center">
   <a href="https://rs2b2t.com/discord" rel="noopener noreferrer" target="_blank">
