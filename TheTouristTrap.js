@@ -42038,7 +42038,7 @@ var SHANTAY_TARGETS = [
   { name: ITEM.FEATHER, qty: 10, shop: SHANTAY_SHOP, estGp: 2 },
   { name: ITEM.HAMMER, qty: 1, shop: SHANTAY_SHOP, estGp: 13 }
 ];
-var INITIAL_SHANTAY_TARGETS = SHANTAY_TARGETS.filter((target) => target.name !== ITEM.BAR && target.name !== ITEM.FEATHER && target.name !== ITEM.HAMMER);
+var INITIAL_SHANTAY_TARGETS = SHANTAY_TARGETS;
 function withdrawBankedShortage(snap, name, target) {
   const missing = target - ownedNow(snap, name);
   const available = banked(snap, name);

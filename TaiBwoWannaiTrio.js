@@ -41239,6 +41239,7 @@ var TB_LUBUFU = {
 };
 var KARAMBWANJI_WANTED = 20;
 var KARAMBWAN_BAIT = 4;
+var KARAMBWANJI_RESERVE = KARAMBWAN_BAIT + 1;
 var TB_ID = {
   COINS: 995,
   NET: 303,
@@ -41340,8 +41341,11 @@ var TB_TILE = {
   KARAMBWANJI_SHOAL: new Tile(2801, 3010, 0),
   KARAMBWAN_SHOAL: new Tile(2768, 3165, 0),
   JIMINUA: new Tile(2767, 3122, 0),
+  HARRY: new Tile(2833, 3443, 0),
+  HICKTON: new Tile(2821, 3442, 0),
   ZAMBO: new Tile(2925, 3143, 0),
   BANANA_PLANTATION: new Tile(2916, 3161, 0),
+  SEAWEED: new Tile(2752, 3131, 0),
   FIRE: new Tile(2789, 3049, 0),
   MONKEYS: new Tile(2833, 3031, 0),
   JOGRES: new Tile(2916, 3053, 0)
@@ -41357,6 +41361,8 @@ var TB_NPC = {
   JOGRE: "Jogre",
   ZAMBO: "Zambo",
   JIMINUA: "Jiminua",
+  HARRY: "Harry",
+  HICKTON: "Hickton",
   FISHING_SPOT: "Fishing spot"
 };
 var TIMFRAKU_START = {
@@ -42400,7 +42406,7 @@ function foodNames() {
 function foodHeld(snap) {
   return foodNames().reduce((total, name) => total + held(snap, name), 0);
 }
-var NET = { name: TB_NAME.NET, id: TB_ID.NET, qty: 1 };
+var NET = { name: TB_NAME.NET, id: TB_ID.NET, qty: 1, fromHarry: true };
 var KNIFE = { name: TB_NAME.KNIFE, id: TB_ID.KNIFE, qty: 1, fromJiminua: true };
 var PESTLE = { name: TB_NAME.PESTLE, id: TB_ID.PESTLE, qty: 1, fromJiminua: true };
 var TINDERBOX2 = { name: TB_NAME.TINDERBOX, id: TB_ID.TINDERBOX, qty: 1, fromJiminua: true };
@@ -42421,9 +42427,6 @@ function outstandingSupplies(snap) {
   }
   if (tinsay < TB_TINSAY.COMPLETE) {
     out.push(TINDERBOX2);
-  }
-  if (tinsay < TB_TINSAY.GIVEN_SANDWICH && heldId3(snap, TB_ID.SANDWICH) === 0) {
-    out.push(SEAWEED);
   }
   return out;
 }
@@ -42501,6 +42504,23 @@ var buyAtJiminua = (item, qty) => ({
   shop: { npc: TB_NPC.JIMINUA, anchor: TB_TILE.JIMINUA },
   estGp: 150
 });
+var buyAtHarry = (item, qty) => ({
+  kind: "buy",
+  item,
+  qty,
+  shop: { npc: TB_NPC.HARRY, anchor: TB_TILE.HARRY },
+  estGp: 80
+});
+var buyAtHickton = (item, qty) => ({
+  kind: "buy",
+  item,
+  qty,
+  shop: { npc: TB_NPC.HICKTON, anchor: TB_TILE.HICKTON },
+  estGp: 50
+});
+function shopSourced(item) {
+  return item.fromJiminua || item.fromHarry;
+}
 var DEPOSIT_BELOW_FREE = 6;
 function prepare(snap) {
   const missing = outstandingSupplies(snap).filter((s) => heldId3(snap, s.id) < s.qty);
@@ -42508,7 +42528,7 @@ function prepare(snap) {
   const arrows = arrowChoice(snap);
   const kit = [bow, arrows].filter((n) => Boolean(n));
   const gearMissing = [...kit, ...TB_ARMOUR].filter((name) => !worn(snap, name));
-  const buying = tinsayStage(snap) < TB_TINSAY.GIVEN_RUM || missing.some((s) => s.fromJiminua);
+  const buying = tinsayStage(snap) < TB_TINSAY.GIVEN_RUM || missing.some((s) => s.fromJiminua || s.fromHarry) || !bow || !arrows;
   const coinsLow = buying && held(snap, TB_NAME.COINS) < 100;
   const starving = foodHeld(snap) === 0;
   const wantSpear = spearWanted(snap);
@@ -42538,16 +42558,11 @@ function prepare(snap) {
     const stocked = bankedId2(snap, s.id);
     if (stocked > 0) {
       fromBank.push({ name: s.name, qty: Math.min(s.qty - heldId3(snap, s.id), stocked), id: s.id });
-    } else if (!s.fromJiminua) {
+    } else if (!shopSourced(s)) {
       unavailable.push(s.name);
     }
   }
-  if (!bow) {
-    unavailable.push(`any bow this account can draw at Ranged ${snap.ranged ?? "?"}`);
-  }
-  if (!arrows) {
-    unavailable.push("any arrows");
-  }
+  /* Hickton (289 archeryshop2) stocks Shortbow and Bronze arrow when the bank has none. */
   for (const name of gearMissing) {
     if (banked(snap, name) > 0) {
       fromBank.push({ name, qty: name === arrows ? ARROW_TARGET : 1 });
@@ -42585,6 +42600,16 @@ function prepare(snap) {
   }
   if (unavailable.length > 0) {
     return { kind: "wait", reason: `bank has none of: ${unavailable.join(", ")}` };
+  }
+  const net = missing.find((s) => s.fromHarry);
+  if (net) {
+    return buyAtHarry(net.name, net.qty);
+  }
+  if (!bow) {
+    return buyAtHickton("Shortbow", 1);
+  }
+  if (!arrows) {
+    return buyAtHickton("Bronze arrow", ARROW_TARGET);
   }
   const shopped = missing.find((s) => s.fromJiminua);
   return shopped ? buyAtJiminua(shopped.name, shopped.qty) : null;
@@ -42706,6 +42731,23 @@ async function loadVessel(log) {
     return true;
   }
   return combine(TB_ID.RAW_KARAMBWANJI, TB_ID.VESSEL, TB_ID.VESSEL_LOADED, log);
+}
+async function pickSeaweed(log) {
+  if (heldId4(TB_ID.SEAWEED) > 0) {
+    return true;
+  }
+  if (!await walkTo(TB_TILE.SEAWEED, 6, log)) {
+    return false;
+  }
+  await settleScene();
+  const loc = Locs.query().name("Seaweed").action("Take").within(12).nearest();
+  if (loc) {
+    const before = heldId4(TB_ID.SEAWEED);
+    if (await loc.interact("Take") && await Execution.delayUntil(() => heldId4(TB_ID.SEAWEED) > before, 6000)) {
+      return true;
+    }
+  }
+  return takeGround([TB_ID.SEAWEED], TB_NAME.SEAWEED, log);
 }
 async function pickBanana(log) {
   if (heldId4(TB_ID.BANANA) > 0 || heldId4(TB_ID.SLICED_BANANA) > 0) {
@@ -42896,10 +42938,11 @@ function lubufuLeg(snap, stage) {
     const owed = KARAMBWANJI_WANTED - (stage - TB_LUBUFU.FETCH_KARAMBWANJI);
     const carrying = heldId3(snap, TB_ID.RAW_KARAMBWANJI);
     const free = snap.freeSlots ?? 0;
+    const want = owed + KARAMBWANJI_RESERVE;
     if (carrying >= owed || carrying > 0 && free <= 1) {
-      return custom(`hand Lubufu ${carrying} of the ${owed} Karambwanji he still wants`, giveKarambwanji);
+      return custom(`hand Lubufu ${Math.min(carrying, owed)} of the ${owed} Karambwanji he still wants`, giveKarambwanji);
     }
-    return custom(`net Karambwanji (${carrying}/${owed})`, fishKarambwanji(Math.min(owed, carrying + free)));
+    return custom(`net Karambwanji (${carrying}/${want})`, fishKarambwanji(Math.min(want, carrying + free)));
   }
   return custom("take up Lubufu's apprenticeship", becomeApprentice);
 }
@@ -42981,6 +43024,9 @@ function sandwichLeg(snap) {
     }
     return custom("ask Tamayu to skin the monkey", giveTamayu(TB_ID.MONKEY_CORPSE));
   }
+  if (heldId3(snap, TB_ID.SEAWEED) === 0) {
+    return custom("take seaweed on the Karamja beach", pickSeaweed);
+  }
   return custom("sandwich the seaweed into the monkey skin", makeSandwich);
 }
 function bonesLeg(snap) {
@@ -43059,6 +43105,15 @@ function decide(snap) {
   const tinsay = tinsayStage(snap);
   if (lubufu < TB_LUBUFU.COMPLETE) {
     return lubufuLeg(snap, lubufu);
+  }
+  if (tiadeche < TB_TIADECHE.INTRO && tamayu < TB_TAMAYU.COMPLETE && !hasFlag(snap.progress, TB_FLAG.SPEAR) && kpSpearHeld(snap) === 0 && heldId3(snap, TB_ID.RAW_KARAMBWAN) === 0 && heldId3(snap, TB_ID.POORLY_COOKED_KARAMBWAN) === 0 && heldId3(snap, TB_ID.KARAMBWAN_POISON_PASTE) === 0) {
+    if (heldId3(snap, TB_ID.RAW_KARAMBWANJI) < 1) {
+      return custom("net extra Karambwanji for Lubufu's shoal", fishKarambwanji(KARAMBWANJI_RESERVE));
+    }
+    if (vesselHeld(snap) === 0) {
+      return custom("ask Lubufu for another Karambwan vessel", spareVessel);
+    }
+    return baitedVessel(snap) ?? custom("lower the vessel for a Karambwan at Lubufu's shoal", fishKarambwan(1));
   }
   if (tiadeche < TB_TIADECHE.REQUEST_MANUAL) {
     return tiadecheCatchLeg(snap, tiadeche);
