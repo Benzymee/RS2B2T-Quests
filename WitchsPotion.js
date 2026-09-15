@@ -40585,10 +40585,10 @@ var QUESTS = [
     questPoints: 1,
     requirements: {},
     items: [
-      { name: "Onion", qty: 1, kind: "acquirable" },
-      { name: "Rat's tail", qty: 1, kind: "acquirable" },
+      { name: "Eye of newt", qty: 1, kind: "acquirable" },
       { name: "Burnt meat", qty: 1, kind: "acquirable" },
-      { name: "Eye of newt", qty: 1, kind: "acquirable" }
+      { name: "Onion", qty: 1, kind: "acquirable" },
+      { name: "Rat's tail", qty: 1, kind: "acquirable" }
     ]
   },
   {
@@ -41538,7 +41538,7 @@ var RECORD = QUESTS.find((r) => r.id === "hetty");
 var RATS_TAIL = "Rat's tail";
 var TAIL_ID = 300;
 var TAIL_RADIUS = 12;
-var INGREDIENTS = [RATS_TAIL.toLowerCase(), "onion", "eye of newt", "burnt meat"];
+var INGREDIENTS = ["eye of newt", "burnt meat", "onion", RATS_TAIL.toLowerCase()];
 function foldItemName(name) {
   return name.trim().toLowerCase().replace(/['’`]/g, "");
 }
@@ -41568,10 +41568,10 @@ function startedOr(snap, step) {
   }
   return step;
 }
-var gatherOnion = (snap) => startedOr(snap, { kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_FIELD });
-var gatherEyeOfNewt = (snap) => startedOr(snap, gpShort(snap, 20) > 0 ? { kind: "wait", reason: "need ~20 gp for Eye of newt" } : { kind: "buy", item: "Eye of newt", qty: 1, shop: BETTY_SHOP, estGp: 20 });
+var gatherOnion = (_snap) => ({ kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_FIELD });
+var gatherEyeOfNewt = (snap) => gpShort(snap, 20) > 0 ? { kind: "wait", reason: "need ~20 gp for Eye of newt" } : { kind: "buy", item: "Eye of newt", qty: 1, shop: BETTY_SHOP, estGp: 20 };
 var gatherRatsTail = (snap) => startedOr(snap, { kind: "custom", name: "kill a rat for its tail", run: killRatGrabTail });
-var gatherBurntMeat = (snap) => startedOr(snap, snap.inv.has("cooked meat") || snap.inv.has("raw beef") ? { kind: "custom", name: "burn the meat on the range", run: burnMeat } : gpShort(snap, 20) > 0 ? { kind: "wait", reason: "need ~20 gp for Raw beef" } : { kind: "buy", item: "Raw beef", qty: 2, shop: WYDIN_SHOP, estGp: 20 });
+var gatherBurntMeat = (snap) => snap.inv.has("cooked meat") || snap.inv.has("raw beef") ? { kind: "custom", name: "burn the meat on the range", run: burnMeat } : gpShort(snap, 20) > 0 ? { kind: "wait", reason: "need ~20 gp for Raw beef" } : { kind: "buy", item: "Raw beef", qty: 2, shop: WYDIN_SHOP, estGp: 20 };
 function tailOnGround() {
   return GroundItems.query().where((item) => item.id === TAIL_ID || isRatsTailName(item.name)).action("Take").within(TAIL_RADIUS).nearest();
 }
@@ -41718,10 +41718,10 @@ var hetty = {
   tools: ["coins", "raw beef", "cooked meat"],
   items: (snap) => RECORD.items.filter((item) => !(isRatsTailName(item.name) && holdingRatsTail(snap))),
   gather: {
-    onion: gatherOnion,
-    [RATS_TAIL.toLowerCase()]: gatherRatsTail,
     "eye of newt": gatherEyeOfNewt,
-    "burnt meat": gatherBurntMeat
+    "burnt meat": gatherBurntMeat,
+    onion: gatherOnion,
+    [RATS_TAIL.toLowerCase()]: gatherRatsTail
   },
   decide
 };
