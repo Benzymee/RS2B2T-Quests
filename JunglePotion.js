@@ -41888,7 +41888,9 @@ async function promptLoc(step, log) {
 var JUNGLE_POTION_QUEST = "Jungle Potion";
 var TRUFITUS = new Tile(2809, 3086, 0);
 var ARDOUGNE_BANK = new Tile(2616, 3332, 0);
+var JIMINUA = { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) };
 var FERRY_GP = 30;
+var ANTIPOISON_NAMES = ["Antipoison(4)", "Antipoison(3)", "Antipoison(2)", "Antipoison(1)"];
 var JUNGLE_HERBS = [
   {
     key: "snake weed",
@@ -42122,6 +42124,22 @@ function karamjaPurse(snap) {
   }
   return coins >= FERRY_GP ? null : { kind: "wait", reason: `need ${FERRY_GP} coins for the Brimhaven boat` };
 }
+function hasAntipoison(snap) {
+  return ANTIPOISON_NAMES.some((name) => (snap.inv.get(name.toLowerCase()) ?? 0) > 0);
+}
+function sourceAntipoison(snap) {
+  if (hasAntipoison(snap)) {
+    return null;
+  }
+  if (!snap.bankKnown) {
+    return { kind: "scanBank" };
+  }
+  const bankedPotion = ANTIPOISON_NAMES.find((name) => (snap.bank?.get(name.toLowerCase()) ?? 0) > 0);
+  if (bankedPotion) {
+    return { kind: "withdraw", items: [{ name: bankedPotion, qty: 1 }] };
+  }
+  return { kind: "buy", item: "Antipoison(3)", qty: 1, shop: JIMINUA, estGp: 432 };
+}
 function decide(snap) {
   if (snap.journal === "complete") {
     return { kind: "done" };
@@ -42150,6 +42168,12 @@ function decide(snap) {
   const herb = herbForStage(stage);
   if (!herb) {
     return { kind: "wait", reason: `Jungle Potion stage ${stage} is not implemented` };
+  }
+  if (herb.underground && !hasAntipoison(snap)) {
+    const vial = sourceAntipoison(snap);
+    if (vial) {
+      return vial;
+    }
   }
   const held = snap.invIds?.get(herb.id) ?? 0;
   if (stage % 2 === 1 || held === 0) {
