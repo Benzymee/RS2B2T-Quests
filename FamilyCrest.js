@@ -43056,8 +43056,8 @@ var CALEB_FISH = [
   { id: FC_ID.SWORDFISH, name: FC_ITEM.SWORDFISH },
   { id: FC_ID.BASS, name: FC_ITEM.BASS },
   { id: FC_ID.TUNA, name: FC_ITEM.TUNA },
-  { id: FC_ID.SALMON, name: FC_ITEM.SALMON },
-  { id: FC_ID.SHRIMP, name: FC_ITEM.SHRIMP }
+  { id: FC_ID.SHRIMP, name: FC_ITEM.SHRIMP },
+  { id: FC_ID.SALMON, name: FC_ITEM.SALMON }
 ];
 var BLAST_RUNES = [
   { item: { id: FC_ID.AIR_RUNE, name: FC_ITEM.AIR_RUNE }, qty: RUNE_BUY.air },
@@ -43271,7 +43271,7 @@ function warnFamilyCrestReadiness() {
 var HARRY = { npc: "Harry", anchor: new Tile(2833, 3443, 0) };
 var GERRANT = { npc: "Gerrant", anchor: new Tile(3013, 3225, 0) };
 var CATHERBY_RANGE = new Tile(2817, 3443, 0);
-var DRAYNOR_NET = new Tile(3086, 3231, 0);
+var CATHERBY_NET = new Tile(2838, 3433, 0);
 var SEERS_LURE = new Tile(2716, 3532, 0);
 var CATHERBY_SHORE = new Tile(2845, 3431, 0);
 var TOOL = {
@@ -43332,7 +43332,7 @@ var CATCH = [
     tool: TOOL.NET,
     shop: HARRY,
     estGp: 20,
-    spot: DRAYNOR_NET,
+    spot: CATHERBY_NET,
     action: "Net"
   }
 ];

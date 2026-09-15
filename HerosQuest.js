@@ -44222,6 +44222,25 @@ function eelStep(snap) {
   }
   return { kind: "custom", name: "farm chaos druids for a harralander", run: farmHarralander };
 }
+function iceGlovesStep(snap) {
+  if (anywhere(snap, HERO_ID.FEATHER) > 0) {
+    return null;
+  }
+  if (heldId(snap, HERO_ID.ICE_GLOVES) > 0 || wornId(snap, HERO_ID.ICE_GLOVES)) {
+    return null;
+  }
+  if (bankedId(snap, HERO_ID.ICE_GLOVES) > 0) {
+    return withdraw(HERO_NAMED.ICE_GLOVES, 1, HERO_ID.ICE_GLOVES);
+  }
+  const kit = combatKitStep(snap);
+  if (kit) {
+    return kit;
+  }
+  if (heldFood(snap) < FOOD_TARGET) {
+    return { kind: "withdraw", items: [{ name: foodName(), qty: FOOD_TARGET }] };
+  }
+  return { kind: "custom", name: "kill the Ice Queen for her gloves", run: killIceQueen };
+}
 
 // src/bot/api/ai/quests/defs/heroquest/feather.ts
 var COMBAT_KIT = [
@@ -44779,7 +44798,7 @@ function decide(snap) {
   if (onEntrana(snap.tile)) {
     return featherStep(snap) ?? handInStep(snap);
   }
-  return egress(snap, eelStep(snap) ?? featherStep(snap) ?? handInStep(snap));
+  return egress(snap, iceGlovesStep(snap) ?? eelStep(snap) ?? featherStep(snap) ?? handInStep(snap));
 }
 function egress(snap, step) {
   if (!NEEDS_STREET.has(step.kind)) {

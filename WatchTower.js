@@ -43275,33 +43275,74 @@ function at(area, wanted, step) {
 function needRope(snap, area) {
   return area === "grewIsland" ? null : sourceRope(snap);
 }
-function stageTribes(snap, area) {
+function tobanIslandWork(snap) {
   const progress = snap.progress;
-  if (!hasFlag(progress, "helped-og")) {
-    if (held(snap, WT_ITEM.STOLEN_GOLD.id) > 0 || !hasFlag(progress, "spoken-og")) {
-      return at(area, "yanille", { kind: "custom", name: "talk to Og", run: talkToOg });
-    }
-    if (held(snap, WT_ITEM.TOBAN_KEY.id) > 0) {
-      return at(area, "tobanCamp", { kind: "custom", name: "take the stolen gold from Toban's chest", run: openTobanChest });
-    }
-    return at(area, "yanille", { kind: "custom", name: "ask Og for another chest key", run: talkToOg });
+  if (!hasFlag(progress, "helped-grew") && held(snap, WT_ITEM.OGRE_TOOTH.id) === 0 && hasFlag(progress, "spoken-grew")) {
+    return { kind: "custom", name: "knock out one of Gorad's teeth", run: killGorad };
   }
   if (!hasFlag(progress, "helped-toban")) {
     if (held(snap, WT_ITEM.DRAGON_BONES.id) > 0 || !hasFlag(progress, "spoken-toban")) {
-      return at(area, "tobanCamp", { kind: "custom", name: "talk to Toban", run: talkToToban });
+      return { kind: "custom", name: "talk to Toban", run: talkToToban };
     }
     const bones = bankOnly(snap, WT_ITEM.DRAGON_BONES);
-    return bones ? at(area, "yanille", bones) : at(area, "tobanCamp", { kind: "custom", name: "talk to Toban", run: talkToToban });
-  }
-  if (!hasFlag(progress, "helped-grew")) {
-    if (held(snap, WT_ITEM.OGRE_TOOTH.id) > 0 || !hasFlag(progress, "spoken-grew")) {
-      const rope = needRope(snap, area);
-      return rope ? at(area, "yanille", rope) : at(area, "grewIsland", { kind: "custom", name: "talk to Grew", run: talkToGrew });
+    if (bones) {
+      return bones;
     }
-    return at(area, "tobanCamp", { kind: "custom", name: "knock out one of Gorad's teeth", run: killGorad });
+    return { kind: "custom", name: "talk to Toban", run: talkToToban };
   }
+  if (!hasFlag(progress, "helped-og") && held(snap, WT_ITEM.STOLEN_GOLD.id) === 0) {
+    if (held(snap, WT_ITEM.TOBAN_KEY.id) > 0) {
+      return { kind: "custom", name: "take the stolen gold from Toban's chest", run: openTobanChest };
+    }
+    return { kind: "custom", name: "ask Og for another chest key", run: talkToOg };
+  }
+  return null;
+}
+function stageTribes(snap, area) {
+  const progress = snap.progress;
   const shortOfBerries = owned(snap, WT_ITEM.JANGERBERRIES.id) < JANGERBERRY_TARGET;
   const pickBerries = { kind: "custom", name: "pick jangerberries on Grew island", run: pickJangerberries };
+  if (area === "tobanCamp") {
+    const island = tobanIslandWork(snap);
+    if (island) {
+      if (island.kind === "custom" && island.name !== "ask Og for another chest key") {
+        return island;
+      }
+      return at(area, "yanille", island);
+    }
+  }
+  if (area === "grewIsland") {
+    if (!hasFlag(progress, "spoken-grew") && !hasFlag(progress, "helped-grew")) {
+      return { kind: "custom", name: "talk to Grew", run: talkToGrew };
+    }
+    if (!hasFlag(progress, "helped-grew") && held(snap, WT_ITEM.OGRE_TOOTH.id) > 0) {
+      return { kind: "custom", name: "talk to Grew", run: talkToGrew };
+    }
+    if (shortOfBerries) {
+      return pickBerries;
+    }
+  }
+  if (!hasFlag(progress, "spoken-og") && !hasFlag(progress, "helped-og")) {
+    return at(area, "yanille", { kind: "custom", name: "talk to Og", run: talkToOg });
+  }
+  if (!hasFlag(progress, "spoken-grew") && !hasFlag(progress, "helped-grew")) {
+    const rope = needRope(snap, area);
+    return rope ? at(area, "yanille", rope) : at(area, "grewIsland", { kind: "custom", name: "talk to Grew", run: talkToGrew });
+  }
+  const island = tobanIslandWork(snap);
+  if (island) {
+    if (island.kind !== "custom" || island.name === "ask Og for another chest key") {
+      return at(area, "yanille", island);
+    }
+    return at(area, "tobanCamp", island);
+  }
+  if (!hasFlag(progress, "helped-grew") && held(snap, WT_ITEM.OGRE_TOOTH.id) > 0) {
+    const rope = needRope(snap, area);
+    return rope ? at(area, "yanille", rope) : at(area, "grewIsland", { kind: "custom", name: "talk to Grew", run: talkToGrew });
+  }
+  if (!hasFlag(progress, "helped-og") && held(snap, WT_ITEM.STOLEN_GOLD.id) > 0) {
+    return at(area, "yanille", { kind: "custom", name: "talk to Og", run: talkToOg });
+  }
   if (shortOfBerries && area === "grewIsland") {
     return pickBerries;
   }

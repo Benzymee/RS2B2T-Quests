@@ -41281,6 +41281,7 @@ var UP_LOC = {
 var UP_TILE = {
   ARDOUGNE_BANK: new Tile(2655, 3283, 0),
   AEMAD: new Tile(2613, 3294, 0),
+  HICKTON: new Tile(2821, 3442, 0),
   LOWE: new Tile(3231, 3421, 0),
   LATHAS: new Tile(2578, 3293, 1),
   CASTLE_STAIRS: new Tile(2572, 3296, 0),
@@ -43214,8 +43215,9 @@ function bowCarried(snap) {
   return bowWorn(snap) || firstBow(snap.invIds) !== null;
 }
 var AEMAD = { npc: "Aemad", anchor: UP_TILE.AEMAD };
-var LOWE = { npc: "Lowe", anchor: UP_TILE.LOWE };
+var HICKTON = { npc: "Hickton", anchor: UP_TILE.HICKTON };
 var ROPE_GP = 40;
+var ARROW_GP = 10;
 var BOW_GP = 100;
 var BOW_TO_BUY = UP_ITEM.SHORTBOW;
 function scanBank() {
@@ -43240,7 +43242,7 @@ function fromBank(snap, item, qty) {
 }
 var KIT = [
   { item: UP_ITEM.ROPE, qty: 3, reason: "the rock swing east, which eats one per attempt", shop: AEMAD, unitGp: ROPE_GP },
-  { item: UP_ITEM.BRONZE_ARROW, qty: ARROW_TARGET, reason: "the fire arrow" },
+  { item: UP_ITEM.BRONZE_ARROW, qty: ARROW_TARGET, reason: "the fire arrow", shop: HICKTON, unitGp: ARROW_GP },
   { item: UP_ITEM.TINDERBOX, qty: 1, reason: "lighting the cloth arrow and burning the tomb" },
   { item: UP_ITEM.SPADE, qty: 1, reason: "the filled-in tunnel out of the slave cages" },
   { item: UP_ITEM.BUCKET, qty: 1, reason: "the dwarf brew for Iban's tomb" },
@@ -43272,7 +43274,7 @@ function sourceBow(snap) {
   if (stocked !== null) {
     return withdraw([{ name: NAME_BY_ID.get(stocked) ?? BOW_TO_BUY.name, id: stocked, qty: 1 }]);
   }
-  return buyAt(snap, BOW_TO_BUY, 1, LOWE, BOW_GP);
+  return buyAt(snap, BOW_TO_BUY, 1, HICKTON, BOW_GP);
 }
 function sourceKit(snap) {
   for (const { item, qty, shop, unitGp } of KIT) {
