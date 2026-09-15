@@ -42323,8 +42323,11 @@ function armed(snap) {
   }
   return custom(`fetch the ${PROD} from the barn`, (log) => fetchProd(log));
 }
-function nextSheep(snap) {
-  return SHEEP.find((n) => !hasFlag(snap.progress, `burnt-${n}`)) ?? null;
+function nextToHerd(snap) {
+  return SHEEP.find((n) => !hasFlag(snap.progress, `burnt-${n}`) && held(snap, BONES_OBJ[n]) === 0) ?? null;
+}
+function nextToBurn(snap) {
+  return SHEEP.find((n) => held(snap, BONES_OBJ[n]) > 0) ?? null;
 }
 function decide(snap) {
   if (snap.journal === "complete") {
@@ -42349,25 +42352,26 @@ function decide(snap) {
   if (stage === SH_STAGE.NEED_SUIT) {
     return (snap.inv.get("coins") ?? 0) >= SUIT_GP ? { kind: "talk", stop: ORBON } : { kind: "withdraw", items: [{ name: "Coins", qty: SUIT_GP * 10 }], bank: BANK };
   }
-  const n = nextSheep(snap);
-  if (n === null) {
+  const n = nextToHerd(snap);
+  const bones = nextToBurn(snap);
+  if (n === null && bones === null) {
     return { kind: "talk", stop: HALGRIVE };
   }
   const suit = dressed(snap);
   if (suit) {
     return suit;
   }
-  if (held(snap, BONES_OBJ[n]) > 0) {
-    return custom(`incinerate the remains of sheep ${n}`, (log) => incinerate(n, log));
-  }
   const prod = armed(snap);
   if (prod) {
     return prod;
   }
-  if (held(snap, FEED_OBJ) === 0) {
+  if (held(snap, FEED_OBJ) === 0 && n !== null) {
     return { kind: "talk", stop: HALGRIVE };
   }
-  return custom(`herd and kill sheep ${n}`, (log) => penAndKill(n, log));
+  if (n !== null) {
+    return custom(`herd and kill sheep ${n}`, (log) => penAndKill(n, log));
+  }
+  return custom(`incinerate the remains of sheep ${bones}`, (log) => incinerate(bones, log));
 }
 var sheepherder = {
   record: QUESTS.find((record) => record.id === "sheepherder"),

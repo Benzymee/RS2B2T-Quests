@@ -41072,7 +41072,9 @@ var QUESTS = [
     name: "Tree Gnome Village",
     questPoints: 2,
     requirements: {},
-    items: []
+    items: [
+      { name: "Logs", qty: 6, kind: "acquirable" }
+    ]
   },
   {
     id: "troll",
@@ -42458,6 +42460,7 @@ function stageStep(snap, stage) {
     case TG_STAGE.NOT_STARTED:
       return { kind: "talk", stop: BOLREN };
     case TG_STAGE.STARTED:
+      return logsLeg(snap);
     case TG_STAGE.GAVE_LOGS:
       return { kind: "talk", stop: MONTAI };
     case TG_STAGE.SPOKEN_MONTAI:
@@ -42506,6 +42509,9 @@ var treegnome = {
   bank: TG_TILE.BANK,
   food: FOOD_FLOAT,
   tools: ["logs", "axe", "orb of protection", "gnome amulet"],
+  gather: {
+    logs: (snap) => sourceAxe(snap) ?? custom(`chop ${LOGS_WANTED} logs on the battlefield`, chopLogs)
+  },
   readProgress: readTreeGnomeProgress,
   exit: leaveStronghold,
   warnReadiness,
