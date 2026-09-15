@@ -42660,7 +42660,7 @@ function mix(item, target, product) {
 function stageStep(snap, area2, stage) {
   switch (stage) {
     case PC_STAGE.NOT_STARTED:
-      return inEast(area2, sourceShoppingFloat(snap) ?? custom("ask Edmond about his daughter", startQuest));
+      return inEast(area2, sourceShoppingFloat(snap) ?? sourceRope(snap) ?? sourceMilk(snap) ?? sourceDwellberries(snap) ?? sourceChocolateBar(snap) ?? sourceSnapeGrass(snap) ?? sourcePestle(snap) ?? custom("ask Edmond about his daughter", startQuest));
     case PC_STAGE.STARTED:
       return inEast(area2, sourceDwellberries(snap) ?? custom("give Alrena the dwellberries", giveDwellberries));
     case PC_STAGE.GASMASK:

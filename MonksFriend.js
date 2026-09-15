@@ -40774,7 +40774,10 @@ var QUESTS = [
     name: "Monk's Friend",
     questPoints: 1,
     requirements: {},
-    items: []
+    items: [
+      { name: "Jug of water", qty: 1, kind: "acquirable" },
+      { name: "Logs", qty: 1, kind: "acquirable" }
+    ]
   },
   {
     id: "eadgar",
@@ -42052,6 +42055,10 @@ var monksfriend = {
   hops: HOPS,
   food: 6,
   tools: [BLANKET.toLowerCase(), "jug", "logs", "axe", "coins"],
+  gather: {
+    "jug of water": gatherWater,
+    logs: gatherLogs
+  },
   readStage: readMonksFriendStage,
   decide
 };
