@@ -42516,82 +42516,105 @@ async function farmGoblinMail(log) {
   log(`Goblin ${index} did not die in time`);
   return false;
 }
-async function makeBlueDye(log) {
-  if (Inventory.contains("Blue dye")) {
-    return true;
-  }
-  if (woadLeavesHeld() < 2) {
-    if (Inventory.count("Coins") < 20) {
-      log("need ~20 coins for woad leaves");
-      return false;
-    }
-    let wyson = findWyson();
-    if (!wyson || wyson.distance() > WYSON.leash) {
-      log("walking to Wyson the gardener at the Falador Park shed");
-      if (!await Traversal.walkResilient(FALADOR_PARK_SHED, { radius: 6, attempts: 4, timeoutMs: 180000, log })) {
-        return false;
-      }
-      wyson = findWyson();
-    }
-    if (!wyson) {
-      log("waiting for Wyson the gardener by the park shed");
-      await Execution.delayUntil(() => findWyson() !== null, 20000);
-      wyson = findWyson();
-    }
-    if (!wyson) {
-      log("no Wyson the gardener in Falador Park");
-      return false;
-    }
-    if (wyson.distance() > 1) {
-      await DirectNavigator.walkTo(wyson.tile(), 1, 20000);
-    }
-    const name = wyson.name ?? WYSON.npc;
-    await talkThrough(name, WYSON.prefer, log);
-    return false;
-  }
-  if (Inventory.count("Coins") < 5) {
-    log("need ~5 coins for blue dye");
-    return false;
-  }
-  if (!await gotoNpc(AGGIE_BLUE, [], log)) {
-    return false;
-  }
-  await talkThrough(AGGIE_BLUE.npc, AGGIE_BLUE.prefer, log);
-  return Execution.delayUntil(() => Inventory.contains("Blue dye"), 8000);
+function dyeNeedOrange() {
+  return !Inventory.contains("Orange dye") && !Inventory.contains("Orange goblin mail");
 }
-async function makeOrangeDye(log) {
-  if (Inventory.contains("Orange dye")) {
+function dyeNeedBlue() {
+  return !Inventory.contains("Blue dye") && !Inventory.contains("Blue goblin mail");
+}
+function closerToWysonThanWydin() {
+  const me = Game.tile();
+  if (!me) {
     return true;
   }
-  if (!Inventory.contains("Red dye")) {
-    if (Inventory.count("Redberries") < 3) {
-      return executeStep({ kind: "buy", item: "Redberries", qty: 3, shop: PORT_SARIM_SHOP, estGp: 60 }, [], log);
-    }
-    if (Inventory.count("Coins") < 5) {
-      log("need ~5 coins for red dye");
-      return false;
-    }
-    if (!await gotoNpc(AGGIE_RED, [], log)) {
-      return false;
-    }
-    await talkThrough(AGGIE_RED.npc, AGGIE_RED.prefer, log);
+  return me.distanceTo(FALADOR_PARK_SHED) <= me.distanceTo(PORT_SARIM_SHOP.anchor);
+}
+async function buyWoadLeaves(log) {
+  if (Inventory.count("Coins") < 20) {
+    log("need ~20 coins for woad leaves");
     return false;
   }
-  if (!Inventory.contains("Yellow dye")) {
-    if (Inventory.count("Onion") < 2) {
-      return executeStep({ kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_PATCH }, [], log);
-    }
-    if (Inventory.count("Coins") < 5) {
-      log("need ~5 coins for yellow dye");
+  let wyson = findWyson();
+  if (!wyson || wyson.distance() > WYSON.leash) {
+    log("walking to Wyson the gardener at the Falador Park shed");
+    if (!await Traversal.walkResilient(FALADOR_PARK_SHED, { radius: 6, attempts: 4, timeoutMs: 180000, log })) {
       return false;
     }
-    if (!await gotoNpc(AGGIE_YELLOW, [], log)) {
-      return false;
-    }
-    await talkThrough(AGGIE_YELLOW.npc, AGGIE_YELLOW.prefer, log);
+    wyson = findWyson();
+  }
+  if (!wyson) {
+    log("waiting for Wyson the gardener by the park shed");
+    await Execution.delayUntil(() => findWyson() !== null, 20000);
+    wyson = findWyson();
+  }
+  if (!wyson) {
+    log("no Wyson the gardener in Falador Park");
     return false;
   }
-  return executeStep({ kind: "useOn", item: "Red dye", targetKind: "item", target: "Yellow dye", anchor: AGGIE_ANCHOR, product: "Orange dye" }, [], log);
+  if (wyson.distance() > 1) {
+    await DirectNavigator.walkTo(wyson.tile(), 1, 20000);
+  }
+  const name = wyson.name ?? WYSON.npc;
+  await talkThrough(name, WYSON.prefer, log);
+  return false;
+}
+async function ensureDyeIngredients(log) {
+  const needBerries = dyeNeedOrange() && !Inventory.contains("Red dye") && Inventory.count("Redberries") < 3;
+  const needWoad = dyeNeedBlue() && woadLeavesHeld() < 2;
+  const needOnions = dyeNeedOrange() && !Inventory.contains("Yellow dye") && Inventory.count("Onion") < 2;
+  if (needWoad && needBerries) {
+    if (closerToWysonThanWydin()) {
+      await buyWoadLeaves(log);
+    } else {
+      await executeStep({ kind: "buy", item: "Redberries", qty: 3, shop: PORT_SARIM_SHOP, estGp: 60 }, [], log);
+    }
+    return false;
+  }
+  if (needWoad) {
+    await buyWoadLeaves(log);
+    return false;
+  }
+  if (needBerries) {
+    await executeStep({ kind: "buy", item: "Redberries", qty: 3, shop: PORT_SARIM_SHOP, estGp: 60 }, [], log);
+    return false;
+  }
+  if (needOnions) {
+    await executeStep({ kind: "pickLoc", loc: "Onion", op: "Pick", item: "Onion", anchor: ONION_PATCH }, [], log);
+    return false;
+  }
+  return true;
+}
+async function makeDyeWithAggie(stop, product, coinNote, log) {
+  if (Inventory.count("Coins") < 5) {
+    log(coinNote);
+    return false;
+  }
+  if (!await gotoNpc(stop, [], log)) {
+    return false;
+  }
+  await talkThrough(stop.npc, stop.prefer, log);
+  return Execution.delayUntil(() => Inventory.contains(product), 8000);
+}
+async function makeAllDyes(log) {
+  if (!dyeNeedOrange() && !dyeNeedBlue()) {
+    return true;
+  }
+  if (!await ensureDyeIngredients(log)) {
+    return false;
+  }
+  if (dyeNeedOrange() && !Inventory.contains("Red dye")) {
+    return makeDyeWithAggie(AGGIE_RED, "Red dye", "need ~5 coins for red dye", log);
+  }
+  if (dyeNeedOrange() && !Inventory.contains("Yellow dye")) {
+    return makeDyeWithAggie(AGGIE_YELLOW, "Yellow dye", "need ~5 coins for yellow dye", log);
+  }
+  if (dyeNeedBlue() && !Inventory.contains("Blue dye")) {
+    return makeDyeWithAggie(AGGIE_BLUE, "Blue dye", "need ~5 coins for blue dye", log);
+  }
+  if (dyeNeedOrange() && Inventory.contains("Red dye") && Inventory.contains("Yellow dye")) {
+    return executeStep({ kind: "useOn", item: "Red dye", targetKind: "item", target: "Yellow dye", anchor: AGGIE_ANCHOR, product: "Orange dye" }, [], log);
+  }
+  return !dyeNeedOrange() && !dyeNeedBlue();
 }
 async function stepOutOfGoblinCombat(log) {
   if (!Game.inCombat()) {
@@ -42712,8 +42735,8 @@ var goblindiplomacy = {
   items: goblinDiplomacyItems,
   gather: {
     "goblin mail": goblinMailGatherStep,
-    "orange dye": () => ({ kind: "custom", name: "make orange dye", run: makeOrangeDye }),
-    "blue dye": () => ({ kind: "custom", name: "make blue dye", run: makeBlueDye })
+    "orange dye": () => ({ kind: "custom", name: "make dyes at Aggie", run: makeAllDyes }),
+    "blue dye": () => ({ kind: "custom", name: "make dyes at Aggie", run: makeAllDyes })
   },
   decide
 };
