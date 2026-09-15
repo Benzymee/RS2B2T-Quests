@@ -42450,7 +42450,7 @@ function bestBankWeapon(snap) {
 function scanBank() {
   return { kind: "scanBank", bank: SEERS_BANK };
 }
-var AEMAD = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
+var ARHEIN = { npc: "Arhein", anchor: new Tile(2803, 3430, 0) };
 var ROMMIK = { npc: "Rommik", anchor: new Tile(2949, 3205, 0) };
 var FLYNN = { npc: "Flynn", anchor: new Tile(2958, 3367, 0) };
 var COAL_TRUCKS = new Tile(2582, 3481, 0);
@@ -42597,14 +42597,14 @@ function surfaceLoadout(snap, needBellowsFix, needSmelt) {
     return withdraw(needed);
   }
   if (needSmelt && !hasPickaxe(snap) && !bestBankPickaxe(snap)) {
-    return { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: AEMAD, estGp: 60 };
+    return { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: ARHEIN, estGp: 60 };
   }
   if (held(snap, EW_ITEM.HAMMER.id) === 0 && banked(snap, EW_ITEM.HAMMER.id) === 0) {
-    return { kind: "buy", item: EW_ITEM.HAMMER.name, qty: 1, shop: AEMAD, estGp: 40 };
+    return { kind: "buy", item: EW_ITEM.HAMMER.name, qty: 1, shop: ARHEIN, estGp: 40 };
   }
   if (needSmelt && held(snap, EW_ITEM.COAL.id) < COAL_NEED && banked(snap, EW_ITEM.COAL.id) === 0) {
     const short = COAL_NEED - held(snap, EW_ITEM.COAL.id);
-    return hasPickaxe(snap) ? { kind: "mineRock", rock: "Coal", item: EW_ITEM.COAL.name, qty: short, anchor: COAL_TRUCKS } : { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: AEMAD, estGp: 60 };
+    return hasPickaxe(snap) ? { kind: "mineRock", rock: "Coal", item: EW_ITEM.COAL.name, qty: short, anchor: COAL_TRUCKS } : { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: ARHEIN, estGp: 60 };
   }
   if (needBellowsFix && held(snap, EW_ITEM.THREAD.id) < THREAD_NEED && banked(snap, EW_ITEM.THREAD.id) === 0) {
     return { kind: "buy", item: EW_ITEM.THREAD.name, qty: 1, shop: ROMMIK, estGp: 5 };

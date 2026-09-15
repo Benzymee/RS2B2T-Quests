@@ -41682,7 +41682,7 @@ var BEEHIVE_STAND = new Tile(2758, 3444, 0);
 var REPELLENT_SPAWN = new Tile(2807, 3450, 0);
 var BAT_ANCHOR = new Tile(2589, 3478, 0);
 var ARDOUGNE_BAKER = { npc: "Baker", anchor: new Tile(2669, 3310, 0) };
-var RIMMINGTON_SHOP = { npc: "Shop keeper", anchor: new Tile(2947, 3216, 0) };
+var ARHEIN = { npc: "Arhein", anchor: new Tile(2803, 3430, 0) };
 var has = (snap, name) => (snap.inv.get(name.toLowerCase()) ?? 0) > 0;
 async function wieldWeapon(log) {
   if (Equipment.contains(WEAPON) || !Inventory.contains(WEAPON)) {
@@ -42280,8 +42280,8 @@ var merlinscrystal = {
   gather: {
     "insect repellent": () => ({ kind: "grabGround", item: "Insect repellent", anchor: REPELLENT_SPAWN }),
     bread: (s) => breadPlan(s),
-    tinderbox: (s) => buyOrWait(s, { kind: "buy", item: "Tinderbox", qty: 1, shop: RIMMINGTON_SHOP, estGp: 15 }),
-    bucket: (s) => buyOrWait(s, { kind: "buy", item: "Bucket", qty: 1, shop: RIMMINGTON_SHOP, estGp: 15 })
+    tinderbox: (s) => buyOrWait(s, { kind: "buy", item: "Tinderbox", qty: 1, shop: ARHEIN, estGp: 50 }),
+    bucket: (s) => buyOrWait(s, { kind: "buy", item: "Bucket", qty: 1, shop: ARHEIN, estGp: 50 })
   },
   tools: ["excalibur", "black candle", "lit black candle", "bat bones", "bucket of wax", "bucket", "insect repellent", "bread", "tinderbox", "coins", "rune mace"],
   decide
