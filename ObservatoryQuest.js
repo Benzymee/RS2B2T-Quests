@@ -42580,6 +42580,9 @@ function supply(snap, want) {
   if (barShort && oreShort(snap)) {
     return ore(snap);
   }
+  if (barShort) {
+    return smeltBronze;
+  }
   if (planksShort) {
     return planks(snap);
   }
@@ -42588,9 +42591,6 @@ function supply(snap, want) {
   }
   if (glassShort) {
     return heldId2(snap, OBS_ID.BUCKET_OF_SAND) === 0 ? sand(snap) : smeltGlass;
-  }
-  if (barShort) {
-    return smeltBronze;
   }
   if (mouldShort) {
     return fetchMould;

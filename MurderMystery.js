@@ -42175,6 +42175,7 @@ async function provePoison(order, log) {
     await ask(suspect.stop, log);
     await investigate(suspect.poison, log);
     if (await proved()) {
+      poisonCulprit = suspect;
       return true;
     }
   }
@@ -42189,10 +42190,14 @@ function banked(snap, id) {
   return snap.bankKnown ? snap.bankIds?.get(id) ?? 0 : 0;
 }
 var THREADS = [MURDER_OBJ.THREAD_GREEN, MURDER_OBJ.THREAD_RED, MURDER_OBJ.THREAD_BLUE];
+var poisonCulprit = null;
 function heldThread(snap) {
   return THREADS.find((id) => held(snap, id) > 0) ?? null;
 }
 function accused(snap, thread) {
+  if (poisonCulprit) {
+    return poisonCulprit;
+  }
   if (held(snap, MURDER_OBJ.KILLERS_PRINT) === 0) {
     return null;
   }
@@ -42250,20 +42255,25 @@ function decide(snap) {
     }
   }
   if (snap.journal === "notStarted") {
+    poisonCulprit = null;
     return { kind: "talk", stop: GUARD_START };
   }
   const thread = heldThread(snap);
   if (thread === null) {
     return custom("take the thread from the smashed window", takeThread);
   }
-  if (!printed) {
-    const order = suspectOrder(thread);
-    return custom("match the murderer's fingerprints", (log) => takePrints(order, log));
+  if (held(snap, MURDER_OBJ.DAGGER) === 0 && held(snap, MURDER_OBJ.DAGGER_DUST) === 0 && held(snap, MURDER_OBJ.UNKNOWN_PRINT) === 0 && !printed) {
+    return custom("take the dagger from the study", takeDagger);
   }
   if (!hasFlag(progress, POISON_PROVED)) {
     const named = accused(snap, thread);
     const order = named ? [named] : suspectOrder(thread);
     return custom("prove the family lied about the poison", (log) => provePoison(order, log));
+  }
+  if (!printed) {
+    const named = accused(snap, thread);
+    const order = named ? [named] : suspectOrder(thread);
+    return custom("match the murderer's fingerprints", (log) => takePrints(order, log));
   }
   return { kind: "talk", stop: GUARD_HANDIN };
 }

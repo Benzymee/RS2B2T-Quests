@@ -41032,7 +41032,9 @@ var QUESTS = [
     name: "Sea Slug Quest",
     questPoints: 1,
     requirements: { skills: [{ skill: "firemaking", level: 30 }] },
-    items: []
+    items: [
+      { name: "Swamp paste", qty: 1, kind: "acquirable" }
+    ]
   },
   {
     id: "sheepherder",
@@ -42055,6 +42057,9 @@ var seaslug = {
   bank: SS_TILE.BANK,
   food: 6,
   tools: ["torch", "damp sticks", "dry sticks", "broken glass", "swamp paste", "coins"],
+  gather: {
+    "swamp paste": (snap) => sourcePaste(snap) ?? { kind: "buy", item: SS_ITEM.SWAMP_PASTE, qty: 1, shop: KHAZARD_SHOP, estGp: PASTE_GP }
+  },
   readProgress: readSeaSlugProgress,
   decide
 };
