@@ -41199,6 +41199,7 @@ var FC_TILE = {
   DWARF_EAST: new Tile(2876, 3482, 0)
 };
 var HARRY_SHOP = { npc: "Harry", anchor: FC_TILE.HARRY };
+var GERRANT = { npc: "Gerrant", anchor: new Tile(3013, 3225, 0) };
 var DWARF_START = {
   npc: "Mountain Dwarf",
   anchor: FC_TILE.DWARF_WEST,
@@ -41232,9 +41233,8 @@ function nearestDwarf(t) {
   }
   return FC_TILE.DWARF_WEST.distanceTo(t) <= FC_TILE.DWARF_EAST.distanceTo(t) ? FC_TILE.DWARF_WEST : FC_TILE.DWARF_EAST;
 }
-var RIDGE_X = 2860;
-function nearestSpade(t) {
-  return t && t.x < RIDGE_X ? FC_TILE.SPADE_ARDOUGNE : FC_TILE.SPADE_FALADOR;
+function nearestSpade(_t) {
+  return FC_TILE.SPADE_ARDOUGNE;
 }
 
 // src/bot/api/walking/Reach.ts
@@ -42031,7 +42031,8 @@ function sourceRod(snap) {
   if (heldId(snap, FC_ID.FISHING_ROD) > 0) {
     return null;
   }
-  return fromBank(snap, FC_ID.FISHING_ROD, ITEM.ROD, 1) ?? { kind: "buy", item: ITEM.ROD, qty: 1, shop: HARRY_SHOP, estGp: ROD_GP };
+  const shop = heldId(snap, FC_ID.GARLIC) > 0 ? HARRY_SHOP : GERRANT;
+  return fromBank(snap, FC_ID.FISHING_ROD, ITEM.ROD, 1) ?? { kind: "buy", item: ITEM.ROD, qty: 1, shop, estGp: ROD_GP };
 }
 function sourceSpade(snap) {
   if (heldId(snap, FC_ID.SPADE) > 0) {
@@ -42110,9 +42111,9 @@ function decide(snap) {
   }
   switch (stage) {
     case FC_STAGE.NOT_STARTED:
-      return sourceGarlic(snap) ?? sourceSpade(snap) ?? { kind: "custom", name: "ask the Mountain Dwarf for the competition pass", run: startQuest };
+      return sourceSpade(snap) ?? sourceRod(snap) ?? sourceGarlic(snap) ?? { kind: "custom", name: "ask the Mountain Dwarf for the competition pass", run: startQuest };
     case FC_STAGE.STARTED:
-      return outside(snap, sourcePass(snap) ?? sourceGarlic(snap) ?? sourceRod(snap) ?? sourceWorms(snap, WORM_TARGET) ?? sourceFee(snap)) ?? { kind: "custom", name: "pay Bonzo the contest entry fee", run: payEntryFee };
+      return outside(snap, sourcePass(snap) ?? sourceRod(snap) ?? sourceGarlic(snap) ?? sourceWorms(snap, WORM_TARGET) ?? sourceFee(snap)) ?? { kind: "custom", name: "pay Bonzo the contest entry fee", run: payEntryFee };
     case FC_STAGE.IN_COMP:
       if (heldId(snap, FC_ID.GARLIC) > 0) {
         return { kind: "custom", name: "stash the garlic in the wall pipe", run: stashGarlic };

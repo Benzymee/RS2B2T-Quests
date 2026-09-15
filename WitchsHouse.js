@@ -40646,8 +40646,8 @@ var QUESTS = [
     questPoints: 4,
     requirements: {},
     items: [
-      { name: "Cheese", qty: 1, kind: "acquirable" },
-      { name: "Leather gloves", qty: 1, kind: "acquirable" }
+      { name: "Leather gloves", qty: 1, kind: "acquirable" },
+      { name: "Cheese", qty: 1, kind: "acquirable" }
     ]
   },
   {
@@ -41223,6 +41223,7 @@ var BOY = {
 };
 var WYDIN = { npc: "Wydin", anchor: new Tile(3014, 3204, 0) };
 var THESSALIA = { npc: "Thessalia", anchor: new Tile(3204, 3417, 0) };
+var JIMINUA = { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) };
 var BETTY = { npc: "Betty", anchor: new Tile(3012, 3259, 0) };
 var SHOP_GP = 200;
 var FALADOR_WEST_BANK = new Tile(2946, 3369, 0);
@@ -42634,7 +42635,7 @@ var witchshouse = {
   sustain: { foods: ["Lobster", "Swordfish", "Trout"], eatBelowHp: 0.6 },
   gather: {
     cheese: (_snap, need) => ({ kind: "buy", item: WH_NAME.CHEESE, qty: need, shop: WYDIN, estGp: SHOP_GP }),
-    "leather gloves": (_snap, need) => ({ kind: "buy", item: WH_NAME.GLOVES, qty: need, shop: THESSALIA, estGp: SHOP_GP })
+    "leather gloves": (_snap, need) => ({ kind: "buy", item: WH_NAME.GLOVES, qty: need, shop: JIMINUA, estGp: SHOP_GP })
   },
   observe: (snap, step) => [
     `stage=${snap.progress?.stage ?? snap.stage ?? "?"} at=${where(snap)}` + ` key=${heldId(snap, WH_OBJ.DOOR_KEY)} magnet=${heldId(snap, WH_OBJ.MAGNET)}` + ` cheese=${heldId(snap, WH_OBJ.CHEESE)} diary=${heldId(snap, WH_OBJ.DIARY)}` + ` shedkey=${heldId(snap, WH_OBJ.SHED_KEY)} ball=${heldId(snap, WH_OBJ.BALL)}` + ` gloves=${wearingGloves(snap) ? "worn" : heldId(snap, WH_OBJ.GLOVES)} step=${step.kind}`
