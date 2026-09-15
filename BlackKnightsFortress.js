@@ -40117,7 +40117,7 @@ var UNIVERSAL_GATHERERS = {
     kind: "buy",
     item: "Iron chainbody",
     qty,
-    shop: ANCHORS.HORVIK_ARMOUR_SHOP,
+    shop: ANCHORS.WAYNE_CHAINS,
     estGp: 200 * qty
   }),
   "bronze med helm": (_snap, qty) => ({
@@ -40132,7 +40132,7 @@ var UNIVERSAL_GATHERERS = {
     loc: "Cabbage",
     op: "Pick",
     item: "Cabbage",
-    anchor: ANCHORS.CABBAGE_DRAYNOR
+    anchor: ANCHORS.CABBAGE_MONASTERY
   }),
   onion: (_snap, _qty) => ({
     kind: "pickLoc",
@@ -41671,7 +41671,7 @@ var BKF_TILE = {
   GRILL_LADDER_LOC: new Tile(3021, 3510, 0),
   GRILL: new Tile(3025, 3508, 0),
   HOLE: new Tile(3031, 3508, 1),
-  CABBAGE_FIELD: new Tile(3053, 3306, 0)
+  CABBAGE_FIELD: new Tile(3058, 3483, 0)
 };
 var SECRET_WALL_ID = 2341;
 var GUARD_DOOR_ID = 2337;
@@ -42175,17 +42175,28 @@ async function infiltrate(log) {
   }
   return dropCabbage(log);
 }
+var CABBAGE_PICK_RADIUS = 12;
+function monasteryCabbage() {
+  return Locs.query().name("Cabbage").action("Pick").within(CABBAGE_PICK_RADIUS).where((loc) => BKF_TILE.CABBAGE_FIELD.distanceTo(loc.tile()) <= CABBAGE_PICK_RADIUS).nearest();
+}
 async function pickCabbage(log) {
   if (Inventory.contains("Cabbage")) {
     return true;
   }
-  const plant = Locs.query().name("Cabbage").action("Pick").within(10).nearest();
-  if (!plant) {
+  const here = Game.tile();
+  if (!here || BKF_TILE.CABBAGE_FIELD.distanceTo(here) > CABBAGE_PICK_RADIUS) {
+    log("walking to the monastery cabbage patch east of Ice Mountain");
     await Traversal.walkResilient(BKF_TILE.CABBAGE_FIELD, { radius: 4, attempts: 4, timeoutMs: 120000, log });
     return false;
   }
+  const plant = monasteryCabbage();
+  if (!plant) {
+    log("no cabbage within 12 tiles of the monastery patch — Draynor Manor's magic cabbage would fail the quest");
+    await Traversal.walkResilient(BKF_TILE.CABBAGE_FIELD, { radius: 4, attempts: 2, timeoutMs: 30000, log });
+    return false;
+  }
   const before = Inventory.count("Cabbage");
-  log("picking a cabbage from the Draynor Manor field");
+  log("picking a cabbage from the monastery patch east of Ice Mountain");
   if (!await plant.interact("Pick")) {
     return false;
   }

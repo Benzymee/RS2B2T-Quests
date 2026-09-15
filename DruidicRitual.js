@@ -40749,10 +40749,10 @@ var QUESTS = [
     questPoints: 4,
     requirements: {},
     items: [
-      { name: "Raw bear meat", qty: 1, kind: "acquirable" },
-      { name: "Raw beef", qty: 1, kind: "acquirable" },
       { name: "Raw chicken", qty: 1, kind: "acquirable" },
-      { name: "Raw rat meat", qty: 1, kind: "acquirable" }
+      { name: "Raw beef", qty: 1, kind: "acquirable" },
+      { name: "Raw rat meat", qty: 1, kind: "acquirable" },
+      { name: "Raw bear meat", qty: 1, kind: "acquirable" }
     ]
   },
   {
@@ -41599,10 +41599,10 @@ var DRUIDIC_RITUAL_HOPS = [
   }
 ];
 var RITUAL_MEATS = [
-  { raw: "Raw bear meat", enchanted: "Enchanted bear", npc: "Bear", npcId: 105, anchor: new Tile(3159, 3233, 0) },
-  { raw: "Raw rat meat", enchanted: "Enchanted rat", npc: "Giant rat", npcId: 87, anchor: new Tile(3206, 3175, 0) },
   { raw: "Raw chicken", enchanted: "Enchanted chicken", npc: "Chicken", npcId: 41, anchor: new Tile(3228, 3298, 0) },
-  { raw: "Raw beef", enchanted: "Enchanted beef", npc: "Cow", npcId: 81, anchor: new Tile(3243, 3295, 0) }
+  { raw: "Raw beef", enchanted: "Enchanted beef", npc: "Cow", npcId: 81, anchor: new Tile(3243, 3295, 0) },
+  { raw: "Raw rat meat", enchanted: "Enchanted rat", npc: "Giant rat", npcId: 87, anchor: new Tile(3206, 3175, 0) },
+  { raw: "Raw bear meat", enchanted: "Enchanted bear", npc: "Bear", npcId: 105, anchor: new Tile(3159, 3233, 0) }
 ];
 var KEEP_ITEMS = RITUAL_MEATS.flatMap((meat) => [meat.raw.toLowerCase(), meat.enchanted.toLowerCase()]);
 function druidicRitualArea(tile) {

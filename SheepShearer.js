@@ -41230,9 +41230,9 @@ var FRED = {
 var BALLS_NEEDED = 20;
 var SITES = {
   pen: new Tile(3197, 3266, 0),
-  wheelStand: new Tile(2982, 3315, 0),
+  wheelStand: new Tile(3209, 3213, 1),
   shearsSpawn: new Tile(3152, 3306, 0),
-  spinLabel: "spin wool at Falador"
+  spinLabel: "spin wool at Lumbridge castle"
 };
 function gatherBalls(snap, need) {
   return gatherWool(snap, need, SITES);

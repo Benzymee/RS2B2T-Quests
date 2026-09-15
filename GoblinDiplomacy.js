@@ -40487,9 +40487,9 @@ var QUESTS = [
     questPoints: 5,
     requirements: {},
     items: [
-      { name: "Goblin mail", qty: 3, kind: "acquirable" },
       { name: "Orange dye", qty: 1, kind: "acquirable" },
-      { name: "Blue dye", qty: 1, kind: "acquirable" }
+      { name: "Blue dye", qty: 1, kind: "acquirable" },
+      { name: "Goblin mail", qty: 3, kind: "acquirable" }
     ]
   },
   {
@@ -42377,14 +42377,14 @@ function goblinDiplomacyItems(snap) {
   const filled = (accounted.orange ? 1 : 0) + (accounted.blue ? 1 : 0);
   const remainingPlain = Math.max(0, 3 - filled);
   const items = [];
-  if (plain < remainingPlain) {
-    items.push({ name: "Goblin mail", qty: remainingPlain, kind: "acquirable" });
-  }
   if (!accounted.orange) {
     items.push({ name: "Orange dye", qty: 1, kind: "acquirable" });
   }
   if (!accounted.blue) {
     items.push({ name: "Blue dye", qty: 1, kind: "acquirable" });
+  }
+  if (plain < remainingPlain) {
+    items.push({ name: "Goblin mail", qty: remainingPlain, kind: "acquirable" });
   }
   return items;
 }

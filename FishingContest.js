@@ -41227,7 +41227,7 @@ function inCompound(t) {
   return !!t && t.level === 0 && t.x >= 2628 && t.x <= 2642 && t.z >= 3413 && t.z <= 3446;
 }
 function nearestDwarf(t) {
-  if (!t) {
+  if (!t || t.x < RIDGE_X) {
     return FC_TILE.DWARF_EAST;
   }
   return FC_TILE.DWARF_WEST.distanceTo(t) <= FC_TILE.DWARF_EAST.distanceTo(t) ? FC_TILE.DWARF_WEST : FC_TILE.DWARF_EAST;
@@ -42110,9 +42110,9 @@ function decide(snap) {
   }
   switch (stage) {
     case FC_STAGE.NOT_STARTED:
-      return sourceGarlic(snap) ?? sourceSpade(snap) ?? { kind: "custom", name: "ask the Mountain Dwarf for the competition pass", run: startQuest };
+      return sourceSpade(snap) ?? { kind: "custom", name: "ask the Mountain Dwarf for the competition pass", run: startQuest };
     case FC_STAGE.STARTED:
-      return outside(snap, sourcePass(snap) ?? sourceGarlic(snap) ?? sourceRod(snap) ?? sourceWorms(snap, WORM_TARGET) ?? sourceFee(snap)) ?? { kind: "custom", name: "pay Bonzo the contest entry fee", run: payEntryFee };
+      return outside(snap, sourcePass(snap) ?? sourceRod(snap) ?? sourceWorms(snap, WORM_TARGET) ?? sourceGarlic(snap) ?? sourceFee(snap)) ?? { kind: "custom", name: "pay Bonzo the contest entry fee", run: payEntryFee };
     case FC_STAGE.IN_COMP:
       if (heldId(snap, FC_ID.GARLIC) > 0) {
         return { kind: "custom", name: "stash the garlic in the wall pipe", run: stashGarlic };

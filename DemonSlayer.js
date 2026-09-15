@@ -42143,6 +42143,7 @@ var TRAIBORN = {
 var WIZ_INSIDE_STAND = new Tile(3105, 3160, 0);
 var DRAIN_TILE = new Tile(3225, 3495, 0);
 var SINK_TILE = new Tile(3224, 3494, 0);
+var CASTLE_BUCKET = new Tile(3224, 3497, 1);
 var MANHOLE_TILE = new Tile(3237, 3458, 0);
 var SEWER_LAND = new Tile(3237, 9858, 0);
 var SEWER_KEY = new Tile(3225, 9897, 0);
@@ -42181,7 +42182,7 @@ function fillBucket(snap) {
   if (has(snap, "bucket")) {
     return { kind: "useOn", item: "Bucket", targetKind: "loc", target: "Sink", anchor: SINK_TILE, product: "Bucket of water" };
   }
-  return buyOrWait(snap, { kind: "buy", item: "Bucket", qty: 1, shop: VARROCK_GENERAL, estGp: 15 });
+  return { kind: "grabGround", item: "Bucket", anchor: CASTLE_BUCKET, waitIfMissing: true };
 }
 async function grindGoblins(log) {
   if (Inventory.count("Bones") >= BONES_NEEDED) {
@@ -42296,6 +42297,20 @@ async function drainLeg(log) {
     }
     return false;
   }
+  log("checking the Varrock castle kitchen for a bucket before buying one");
+  if (!await Traversal.walkResilient(CASTLE_BUCKET, { radius: 2, attempts: 3, timeoutMs: 90000, log })) {
+    return false;
+  }
+  const kitchenBucket = GroundItems.query().name("Bucket").within(8).nearest();
+  if (kitchenBucket) {
+    log("taking the bucket from the Varrock castle kitchen");
+    const before = Inventory.count("Bucket");
+    if (await kitchenBucket.interact("Take")) {
+      await Execution.delayUntil(() => Inventory.count("Bucket") > before, 6000);
+    }
+    return false;
+  }
+  log("no kitchen bucket, buying one from the Varrock general store");
   await executeStep({ kind: "buy", item: "Bucket", qty: 1, shop: VARROCK_GENERAL, estGp: 15 }, [], log);
   return false;
 }
@@ -42329,6 +42344,9 @@ async function keyHunt(log) {
     }
     await talkThrough("Captain Rovin", ROVIN.prefer, log);
     return Execution.delayUntil(() => heldId(ROVIN_KEY_ID), 6000);
+  }
+  if (!hasDrain) {
+    return drainLeg(log);
   }
   if (!hasTraiborn) {
     const level = Game.tile()?.level ?? 0;
@@ -42392,9 +42410,6 @@ async function keyHunt(log) {
       }
     }
     return false;
-  }
-  if (!hasDrain) {
-    return drainLeg(log);
   }
   return false;
 }
