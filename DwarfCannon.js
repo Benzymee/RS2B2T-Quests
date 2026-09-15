@@ -41202,12 +41202,12 @@ var MC_OBJ = {
   RAILING: { id: 14, name: "Railing" }
 };
 var RAILINGS = [
-  { id: 15, at: new Tile(2556, 3475, 0) },
-  { id: 16, at: new Tile(2558, 3472, 0) },
-  { id: 17, at: new Tile(2557, 3464, 0) },
-  { id: 18, at: new Tile(2559, 3462, 0) },
+  { id: 20, at: new Tile(2572, 3460, 0) },
   { id: 19, at: new Tile(2564, 3460, 0) },
-  { id: 20, at: new Tile(2572, 3460, 0) }
+  { id: 18, at: new Tile(2559, 3462, 0) },
+  { id: 17, at: new Tile(2557, 3464, 0) },
+  { id: 16, at: new Tile(2558, 3472, 0) },
+  { id: 15, at: new Tile(2556, 3475, 0) }
 ];
 var CANNON_PARTS = ["Pipe", "Barrel", "Axle", "Shaft"];
 var COMMANDER = {
