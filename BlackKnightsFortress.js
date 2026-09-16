@@ -41671,7 +41671,7 @@ var BKF_TILE = {
   GRILL_LADDER_LOC: new Tile(3021, 3510, 0),
   GRILL: new Tile(3025, 3508, 0),
   HOLE: new Tile(3031, 3508, 1),
-  CABBAGE_FIELD: new Tile(3053, 3306, 0)
+  CABBAGE_FIELD: new Tile(3058, 3483, 0)
 };
 var SECRET_WALL_ID = 2341;
 var GUARD_DOOR_ID = 2337;
@@ -42185,7 +42185,7 @@ async function pickCabbage(log) {
     return false;
   }
   const before = Inventory.count("Cabbage");
-  log("picking a cabbage from the Draynor Manor field");
+  log("picking a cabbage from the Edgeville monastery garden");
   if (!await plant.interact("Pick")) {
     return false;
   }

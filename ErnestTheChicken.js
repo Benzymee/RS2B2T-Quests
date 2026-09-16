@@ -42118,6 +42118,9 @@ async function fetchOilCan(log) {
   if (held(EC_ID.OIL_CAN) > 0) {
     return leaveManorBasement(log);
   }
+  if (basementRegion(here()) === "outside" && !await ensurePoisonedFishFood(log)) {
+    return false;
+  }
   for (let pass = 0;pass < 3; pass++) {
     await Sustain.run();
     if (basementRegion(here()) !== "entry" && !await leaveBasement(log)) {
@@ -42245,28 +42248,35 @@ async function searchFountain(log) {
   }
   return "unknown";
 }
+async function ensurePoisonedFishFood(log) {
+  if (held2(EC_ID.POISONED_FISH_FOOD) > 0 || held2(EC_ID.PRESSURE_GAUGE) > 0) {
+    return true;
+  }
+  if (!await takeSpawn(EC_ID.FISH_FOOD, EC_NAME.FISH_FOOD, EC_TILE.FISH_FOOD_SPAWN, log)) {
+    return false;
+  }
+  await Sustain.run();
+  if (!await takeSpawn(EC_ID.POISON, EC_NAME.POISON, EC_TILE.POISON_SPAWN, log)) {
+    return false;
+  }
+  const poison = Inventory.items().find((i2) => i2.id === EC_ID.POISON);
+  const food = Inventory.items().find((i2) => i2.id === EC_ID.FISH_FOOD);
+  if (!poison || !food) {
+    log("poison or fish food went missing before they could be combined");
+    return false;
+  }
+  if (!await poison.useOn(food)) {
+    return false;
+  }
+  if (!await Execution.delayUntil(() => held2(EC_ID.POISONED_FISH_FOOD) > 0, 8000)) {
+    log("combining the poison and the fish food produced nothing");
+    return false;
+  }
+  return true;
+}
 async function poisonFountain(log) {
-  if (held2(EC_ID.POISONED_FISH_FOOD) === 0) {
-    if (!await takeSpawn(EC_ID.POISON, EC_NAME.POISON, EC_TILE.POISON_SPAWN, log)) {
-      return false;
-    }
-    await Sustain.run();
-    if (!await takeSpawn(EC_ID.FISH_FOOD, EC_NAME.FISH_FOOD, EC_TILE.FISH_FOOD_SPAWN, log)) {
-      return false;
-    }
-    const poison = Inventory.items().find((i2) => i2.id === EC_ID.POISON);
-    const food = Inventory.items().find((i2) => i2.id === EC_ID.FISH_FOOD);
-    if (!poison || !food) {
-      log("poison or fish food went missing before they could be combined");
-      return false;
-    }
-    if (!await poison.useOn(food)) {
-      return false;
-    }
-    if (!await Execution.delayUntil(() => held2(EC_ID.POISONED_FISH_FOOD) > 0, 8000)) {
-      log("combining the poison and the fish food produced nothing");
-      return false;
-    }
+  if (!await ensurePoisonedFishFood(log)) {
+    return false;
   }
   await Sustain.run();
   return useOnLoc(EC_ID.POISONED_FISH_FOOD, { name: "Fountain", near: EC_TILE.FOUNTAIN_STAND }, [], () => held2(EC_ID.POISONED_FISH_FOOD) === 0, log);
@@ -42346,7 +42356,10 @@ function bankedId(snap, id) {
   return snap.bankIds?.get(id) ?? 0;
 }
 function kit(snap) {
-  const needSpade = heldId(snap, EC_ID.SPADE) === 0;
+  const haveOil = heldId(snap, EC_ID.OIL_CAN) > 0;
+  const haveTube = heldId(snap, EC_ID.RUBBER_TUBE) > 0;
+  const haveKey = heldId(snap, EC_ID.CLOSET_KEY) > 0;
+  const needSpade = haveOil && !haveTube && !haveKey && heldId(snap, EC_ID.SPADE) === 0;
   const foodName = QuestFood.name?.trim();
   const foodHeld = foodName ? snap.inv.get(foodName.toLowerCase()) ?? 0 : 0;
   const foodBanked = foodName ? snap.bank?.get(foodName.toLowerCase()) ?? 0 : 0;
@@ -42367,20 +42380,23 @@ function kit(snap) {
   if (items.length > 0) {
     return { kind: "withdraw", items };
   }
-  return { kind: "grabGround", item: EC_NAME.SPADE, anchor: EC_TILE.SPADE_SPAWN, waitIfMissing: true };
+  if (needSpade) {
+    return { kind: "grabGround", item: EC_NAME.SPADE, anchor: EC_TILE.SPADE_SPAWN, waitIfMissing: true };
+  }
+  return null;
 }
 
 // src/bot/api/ai/quests/defs/ernest/index.ts
 var talk = (stop) => ({ kind: "talk", stop });
 function parts(snap) {
-  if (heldId(snap, EC_ID.RUBBER_TUBE) === 0) {
-    return { kind: "custom", name: "fetch the rubber tube", run: fetchRubberTube };
-  }
   if (heldId(snap, EC_ID.OIL_CAN) === 0) {
     return { kind: "custom", name: "fetch the oil can", run: fetchOilCan };
   }
   if (heldId(snap, EC_ID.PRESSURE_GAUGE) === 0) {
     return { kind: "custom", name: "fetch the pressure gauge", run: fetchPressureGauge };
+  }
+  if (heldId(snap, EC_ID.RUBBER_TUBE) === 0) {
+    return { kind: "custom", name: "fetch the rubber tube", run: fetchRubberTube };
   }
   return talk(ODDENSTEIN);
 }
@@ -42421,14 +42437,14 @@ var ernest = {
   bank: EC_TILE.DRAYNOR_BANK,
   ownsInventory: true,
   tools: [
-    "spade",
     "poison",
     "fish food",
     "poisoned fish food",
-    "key",
-    "rubber tube",
     "oil can",
+    "spade",
+    "key",
     "pressure gauge",
+    "rubber tube",
     "coins"
   ],
   sustain: { foods: ["Lobster", "Swordfish", "Tuna"], eatBelowHp: 0.5 },

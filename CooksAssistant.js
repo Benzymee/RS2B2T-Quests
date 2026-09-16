@@ -40430,8 +40430,8 @@ var QUESTS = [
     questPoints: 1,
     requirements: {},
     items: [
-      { name: "Egg", qty: 1, kind: "acquirable" },
       { name: "Pot of flour", qty: 1, kind: "acquirable" },
+      { name: "Egg", qty: 1, kind: "acquirable" },
       { name: "Bucket of milk", qty: 1, kind: "acquirable" }
     ]
   },
@@ -41272,14 +41272,14 @@ function decide(snap) {
   if (snap.journal === "notStarted") {
     return { kind: "talk", stop: COOK };
   }
+  if (!snap.inv.has("pot of flour")) {
+    return gatherFlour(snap);
+  }
   if (!snap.inv.has("egg")) {
     return gatherEgg();
   }
   if (!snap.inv.has("bucket of milk")) {
     return gatherMilk(snap);
-  }
-  if (!snap.inv.has("pot of flour")) {
-    return gatherFlour(snap);
   }
   return { kind: "talk", stop: COOK };
 }
