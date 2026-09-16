@@ -40749,9 +40749,9 @@ var QUESTS = [
     questPoints: 4,
     requirements: {},
     items: [
-      { name: "Raw bear meat", qty: 1, kind: "acquirable" },
-      { name: "Raw beef", qty: 1, kind: "acquirable" },
       { name: "Raw chicken", qty: 1, kind: "acquirable" },
+      { name: "Raw beef", qty: 1, kind: "acquirable" },
+      { name: "Raw bear meat", qty: 1, kind: "acquirable" },
       { name: "Raw rat meat", qty: 1, kind: "acquirable" }
     ]
   },
@@ -41598,11 +41598,12 @@ var DRUIDIC_RITUAL_HOPS = [
     arrive: new Tile(2884, 3397, 0)
   }
 ];
+var WYDIN_SHOP = { npc: "Wydin", anchor: new Tile(3014, 3204, 0) };
 var RITUAL_MEATS = [
+  { raw: "Raw chicken", enchanted: "Enchanted chicken", shop: WYDIN_SHOP },
+  { raw: "Raw beef", enchanted: "Enchanted beef", shop: WYDIN_SHOP },
   { raw: "Raw bear meat", enchanted: "Enchanted bear", npc: "Bear", npcId: 105, anchor: new Tile(3159, 3233, 0) },
-  { raw: "Raw rat meat", enchanted: "Enchanted rat", npc: "Giant rat", npcId: 87, anchor: new Tile(3206, 3175, 0) },
-  { raw: "Raw chicken", enchanted: "Enchanted chicken", npc: "Chicken", npcId: 41, anchor: new Tile(3228, 3298, 0) },
-  { raw: "Raw beef", enchanted: "Enchanted beef", npc: "Cow", npcId: 81, anchor: new Tile(3243, 3295, 0) }
+  { raw: "Raw rat meat", enchanted: "Enchanted rat", npc: "Giant rat", npcId: 87, anchor: new Tile(3206, 3175, 0) }
 ];
 var KEEP_ITEMS = RITUAL_MEATS.flatMap((meat) => [meat.raw.toLowerCase(), meat.enchanted.toLowerCase()]);
 function druidicRitualArea(tile) {
@@ -41636,6 +41637,18 @@ async function takeMeatDrop(meat) {
   }
   return Execution.delayUntil(() => Inventory.contains(meat.raw), 8000);
 }
+function meatNpc(meat, within) {
+  const name = meat.npc?.toLowerCase();
+  return Npcs.query().where((n) => {
+    if (n.inCombat || n.targetsAnotherPlayer()) {
+      return false;
+    }
+    if (meat.npcId !== undefined && n.id === meat.npcId) {
+      return true;
+    }
+    return Boolean(name) && (n.name ?? "").toLowerCase() === name;
+  }).action("Attack").within(within).nearest();
+}
 async function huntMeat(meat, log) {
   if (Inventory.contains(meat.raw) || Inventory.contains(meat.enchanted)) {
     return true;
@@ -41643,17 +41656,20 @@ async function huntMeat(meat, log) {
   if (await takeMeatDrop(meat)) {
     return true;
   }
-  if (!await Traversal.walkResilient(meat.anchor, { radius: 7, attempts: 3, timeoutMs: 180000, log })) {
-    return false;
-  }
-  if (await takeMeatDrop(meat)) {
-    return true;
+  let target = meatNpc(meat, 15);
+  if (!target) {
+    if (!meat.anchor || !await Traversal.walkResilient(meat.anchor, { radius: 7, attempts: 3, timeoutMs: 180000, log })) {
+      return false;
+    }
+    if (await takeMeatDrop(meat)) {
+      return true;
+    }
+    target = meatNpc(meat, 15);
   }
   if (Game.inCombat()) {
     await Execution.delayUntil(() => !Game.inCombat(), 120000);
     return takeMeatDrop(meat);
   }
-  const target = Npcs.query().where((n) => n.id === meat.npcId && !n.inCombat && !n.targetsAnotherPlayer()).action("Attack").within(15).nearest();
   if (!target) {
     log(`waiting for an available ${meat.npc} at the guaranteed ${meat.raw} source`);
     await Execution.delayTicks(2);
@@ -41666,6 +41682,38 @@ async function huntMeat(meat, log) {
   }
   await Execution.delayUntil(() => GroundItems.query().name(meat.raw).within(15).nearest() !== null || !target.valid(), 120000);
   return takeMeatDrop(meat);
+}
+function sourceMissingMeats(snap, allowBankScan) {
+  const missingHeld = RITUAL_MEATS.filter((meat) => !heldForm(snap, meat));
+  if (missingHeld.length === 0) {
+    return null;
+  }
+  if (allowBankScan && !snap.bankKnown) {
+    return { kind: "scanBank", bank: FALADOR_WEST_BANK };
+  }
+  if (allowBankScan) {
+    const withdraw = [];
+    for (const meat2 of missingHeld) {
+      if (banked(snap, meat2.enchanted) > 0) {
+        withdraw.push({ name: meat2.enchanted, qty: 1 });
+      } else if (banked(snap, meat2.raw) > 0) {
+        withdraw.push({ name: meat2.raw, qty: 1 });
+      }
+    }
+    if (withdraw.length > 0) {
+      const space2 = acquisitionSpace(snap, withdraw.length);
+      return space2 ?? { kind: "withdraw", items: withdraw, bank: FALADOR_WEST_BANK };
+    }
+  }
+  const space = acquisitionSpace(snap, 1);
+  if (space) {
+    return space;
+  }
+  const meat = missingHeld[0];
+  if (meat.shop) {
+    return { kind: "buy", item: meat.raw, qty: 1, shop: meat.shop, estGp: 50 };
+  }
+  return { kind: "custom", name: `hunt ${meat.npc} for ${meat.raw}`, run: (log) => huntMeat(meat, log) };
 }
 function inCauldronRoom() {
   const tile = Game.tile();
@@ -41764,6 +41812,10 @@ function stageTwo(snap) {
   const rawHeld = RITUAL_MEATS.find((meat) => held(snap, meat.raw));
   const area = druidicRitualArea(snap.tile);
   if (area === "dungeon") {
+    const localHunt = missingHeld.find((meat) => meat.npc && meatNpc(meat, 15));
+    if (localHunt) {
+      return { kind: "custom", name: `hunt ${localHunt.npc} in the dungeon for ${localHunt.raw}`, run: (log) => huntMeat(localHunt, log) };
+    }
     if (missingHeld.length > 0) {
       return { kind: "custom", name: "leave the dungeon to recover missing ritual meat", run: leaveDungeon };
     }
@@ -41771,25 +41823,9 @@ function stageTwo(snap) {
       return { kind: "custom", name: `dip ${rawHeld.raw} in the Cauldron of Thunder`, run: (log) => dipMeat(rawHeld, log) };
     }
   }
-  if (missingHeld.length > 0) {
-    if (!snap.bankKnown) {
-      return { kind: "scanBank", bank: FALADOR_WEST_BANK };
-    }
-    const withdraw = [];
-    for (const meat2 of missingHeld) {
-      if (banked(snap, meat2.enchanted) > 0) {
-        withdraw.push({ name: meat2.enchanted, qty: 1 });
-      } else if (banked(snap, meat2.raw) > 0) {
-        withdraw.push({ name: meat2.raw, qty: 1 });
-      }
-    }
-    if (withdraw.length > 0) {
-      const space2 = acquisitionSpace(snap, withdraw.length);
-      return space2 ?? { kind: "withdraw", items: withdraw, bank: FALADOR_WEST_BANK };
-    }
-    const space = acquisitionSpace(snap, 1);
-    const meat = missingHeld[0];
-    return space ?? { kind: "custom", name: `hunt ${meat.npc} for ${meat.raw}`, run: (log) => huntMeat(meat, log) };
+  const sourcing = sourceMissingMeats(snap, true);
+  if (sourcing) {
+    return sourcing;
   }
   if (rawHeld) {
     return { kind: "custom", name: `dip ${rawHeld.raw} in the Cauldron of Thunder`, run: (log) => dipMeat(rawHeld, log) };
@@ -41807,10 +41843,10 @@ function decide(snap) {
     return { kind: "wait", reason: "Druidic Ritual stage unavailable" };
   }
   if (snap.stage === DRUIDIC_RITUAL_STAGE.NOT_STARTED) {
-    return { kind: "talk", stop: KAQEMEEX };
+    return sourceMissingMeats(snap, false) ?? { kind: "talk", stop: KAQEMEEX };
   }
   if (snap.stage === DRUIDIC_RITUAL_STAGE.STARTED) {
-    return { kind: "talk", stop: SANFEW };
+    return sourceMissingMeats(snap, false) ?? { kind: "talk", stop: SANFEW };
   }
   if (snap.stage === DRUIDIC_RITUAL_STAGE.SPOKEN_TO_SANFEW) {
     return stageTwo(snap);
@@ -41824,7 +41860,7 @@ var druidicritual = {
   record: QUESTS.find((record) => record.id === "druid"),
   hops: DRUIDIC_RITUAL_HOPS,
   bank: FALADOR_WEST_BANK,
-  grind: ["Bear", "Giant rat", "Chicken", "Cow", "Suit of armour"],
+  grind: ["Bear", "Giant rat", "Suit of armour"],
   tools: KEEP_ITEMS,
   ownsInventory: true,
   readStage: readDruidicRitualStage,
