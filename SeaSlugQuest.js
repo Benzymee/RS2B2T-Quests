@@ -41984,18 +41984,18 @@ function torchStep(snap) {
   if (held(snap, SS_OBJ.DRY_STICKS) > 0) {
     return { kind: "custom", name: "rub the dry sticks together", run: rubSticks };
   }
-  if (held(snap, SS_OBJ.DAMP_STICKS) === 0) {
-    return { kind: "grabGround", item: SS_ITEM.DAMP_STICKS, anchor: SS_TILE.DAMP_STICKS_SPAWN, waitIfMissing: true };
-  }
   if (held(snap, SS_OBJ.BROKEN_GLASS) === 0) {
     return { kind: "grabGround", item: SS_ITEM.BROKEN_GLASS, anchor: SS_TILE.BROKEN_GLASS_SPAWN, waitIfMissing: true };
+  }
+  if (held(snap, SS_OBJ.DAMP_STICKS) === 0) {
+    return { kind: "grabGround", item: SS_ITEM.DAMP_STICKS, anchor: SS_TILE.DAMP_STICKS_SPAWN, waitIfMissing: true };
   }
   return {
     kind: "useOn",
     item: SS_ITEM.BROKEN_GLASS,
     targetKind: "item",
     target: SS_ITEM.DAMP_STICKS,
-    anchor: SS_TILE.BROKEN_GLASS_SPAWN,
+    anchor: SS_TILE.DAMP_STICKS_SPAWN,
     product: SS_ITEM.DRY_STICKS
   };
 }
