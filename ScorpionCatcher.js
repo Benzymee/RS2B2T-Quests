@@ -41228,7 +41228,7 @@ var SC_ID = {
 };
 var SC_ITEM = { DUSTY_KEY: "Dusty key", JAIL_KEY: "Jail key", ANTIPOISON: "Antipoison(3)" };
 var ANTIPOISON_DOSES = ["Antipoison(3)", "Antipoison(2)", "Antipoison(1)"];
-var ANTIPOISON_SHOP = { npc: "Shop keeper", anchor: new Tile(2902, 3146, 0) };
+var ANTIPOISON_SHOP = { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) };
 var ANTIPOISON_GP = 600;
 var CAGE_CONTENTS = new Map([
   [CAGE_ID.EMPTY, []],
@@ -42208,18 +42208,18 @@ async function stockAntipoison(log) {
     log(`scorpcatcher: ${coins} gp will not cover the ${ANTIPOISON_GP} the antipoison trip costs — running the spiders uncured`);
     return;
   }
-  log("scorpcatcher: crossing to Musa Point for an antipoison");
+  log("scorpcatcher: buying antipoison at Jiminua on the Brimhaven boat to Taverley");
   if (!await Traversal.walkResilient(ANTIPOISON_SHOP.anchor, { radius: 3, attempts: 3, timeoutMs: WALK_MS, log })) {
-    log("scorpcatcher: could not reach the Karamja general store — running the spiders uncured");
+    log("scorpcatcher: could not reach Jiminua's Jungle Store — running the spiders uncured");
     return;
   }
   if (!await Shop.open(ANTIPOISON_SHOP.npc)) {
-    log("scorpcatcher: the Karamja general store would not open — running the spiders uncured");
+    log("scorpcatcher: Jiminua's Jungle Store would not open — running the spiders uncured");
     return;
   }
   await Shop.buy(SC_ITEM.ANTIPOISON, 1);
   await Shop.close();
-  log(heldDose() !== undefined ? `scorpcatcher: bought an ${SC_ITEM.ANTIPOISON}` : "scorpcatcher: the Karamja general store is out of antipoison — running the spiders uncured");
+  log(heldDose() !== undefined ? `scorpcatcher: bought an ${SC_ITEM.ANTIPOISON}` : "scorpcatcher: Jiminua is out of antipoison — running the spiders uncured");
 }
 async function curePoison(mark, log) {
   if (!GameMessages.sawSince(mark, POISONED)) {
