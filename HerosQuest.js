@@ -34716,6 +34716,7 @@ var SPECIAL_CROSSINGS = [
     label: "Brimhaven->Ardougne ship"
   },
   { x: 2461, z: 3382, level: 0, locName: "Gate", action: "Open", dialogue: { choose: ["OK then"] }, reopenAfterDialogue: true, label: "Gnome Stronghold gate (Femi boxes)" },
+  { x: 2658, z: 3438, level: 0, locName: "Guild door", action: "Open", requiresSkill: { name: "ranged", level: 40 }, label: "Ranging Guild door" },
   { x: 2945, z: 3041, level: 0, locName: "Gate", action: "Open", dialogue: { choose: ["Glough sent me.", "Ka.", "Lu.", "Min."] }, reopenAfterDialogue: true, label: "Karamja shipyard gate (Ka-Lu-Min)" },
   { x: 2945, z: 3042, level: 0, locName: "Gate", action: "Open", dialogue: { choose: ["Glough sent me.", "Ka.", "Lu.", "Min."] }, reopenAfterDialogue: true, label: "Karamja shipyard gate (Ka-Lu-Min)" },
   {
@@ -42063,6 +42064,7 @@ var HERO_TILE = {
   GERRANT: new Tile(3013, 3226, 0),
   JATIX: new Tile(2899, 3428, 0),
   LOWE: new Tile(3232, 3424, 0),
+  DARGAUD: new Tile(2673, 3434, 0),
   LOUIE: new Tile(3316, 3176, 0),
   HORVIK: new Tile(3229, 3439, 0),
   VALAINE: new Tile(3193, 3362, 1),
@@ -42164,6 +42166,7 @@ var GRIP = {
 };
 var HERO_SHOP = {
   LOWE: { npc: "Lowe", anchor: HERO_TILE.LOWE },
+  DARGAUD: { npc: "Bow and Arrow salesman", anchor: HERO_TILE.DARGAUD },
   HORVIK: { npc: "Horvik", anchor: HERO_TILE.HORVIK },
   VALAINE: { npc: "Valaine", anchor: HERO_TILE.VALAINE },
   SCAVVO: { npc: "Scavvo", anchor: HERO_TILE.SCAVVO },
@@ -44563,18 +44566,22 @@ async function talkInHideout(stop, prefer, log) {
 }
 
 // src/bot/api/ai/quests/defs/heroquest/phoenix.ts
-var SNIPE_KIT = [
-  { id: HERO_ID.OAK_LONGBOW, name: HERO_NAMED.OAK_LONGBOW, qty: 1, sources: [{ ...HERO_SHOP.LOWE, gp: 1000 }] },
-  { id: HERO_ID.STEEL_ARROW, name: HERO_NAMED.STEEL_ARROW, qty: 150, sources: [{ ...HERO_SHOP.LOWE, gp: 15000 }] }
-];
+var RANGING_GUILD_LEVEL = 40;
+function snipeKit() {
+  const shops = Skills.level("ranged") >= RANGING_GUILD_LEVEL ? [HERO_SHOP.DARGAUD, HERO_SHOP.LOWE] : [HERO_SHOP.LOWE];
+  return [
+    { id: HERO_ID.OAK_LONGBOW, name: HERO_NAMED.OAK_LONGBOW, qty: 1, sources: shops.map((shop) => ({ ...shop, gp: 1000 })) },
+    { id: HERO_ID.STEEL_ARROW, name: HERO_NAMED.STEEL_ARROW, qty: 150, sources: shops.map((shop) => ({ ...shop, gp: 15000 })) }
+  ];
+}
 var SNIPE_MS = 180000;
 var SNIPE_RANGE = 9;
 var GROUND_RANGE2 = 12;
 function snipeKitStep(snap) {
-  return kitStep(snap, SNIPE_KIT);
+  return kitStep(snap, snipeKit());
 }
 function snipeKitOwned(snap) {
-  return kitOwned(snap, SNIPE_KIT);
+  return kitOwned(snap, snipeKit());
 }
 function talkToStraven(log) {
   return talkInHideout(STRAVEN_TASK, STRAVEN_TASK.prefer, log);
