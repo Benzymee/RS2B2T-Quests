@@ -41192,6 +41192,7 @@ var BIO_NPC = {
   DEVINCI: "DeVinci",
   CHANCY: "Chancy",
   THESSALIA: "Thessalia",
+  FANCY_DRESS: "Fancy dress shop owner",
   GUIDOR: "Guidor",
   LATHAS: "King Lathas"
 };
@@ -41232,6 +41233,7 @@ var BIO_TILE = {
   DEVINCI: new Tile(2933, 3219, 0),
   CHANCY: new Tile(2935, 3219, 0),
   THESSALIA: new Tile(3204, 3417, 0),
+  FANCY_DRESS: new Tile(3279, 3398, 0),
   GATE_OUTSIDE: new Tile(3263, 3406, 0),
   GATE_INSIDE: new Tile(3265, 3406, 0),
   DANCING_DONKEY: new Tile(3270, 3390, 0),
@@ -42502,11 +42504,11 @@ async function collectFromErrandBoys(log) {
   return got > 0;
 }
 async function buyPriestSuit(log) {
-  if (!await walkTo(BIO_TILE.THESSALIA, 3, log)) {
+  if (!await walkTo(BIO_TILE.FANCY_DRESS, 3, log)) {
     return false;
   }
-  if (!await Shop.open(BIO_NPC.THESSALIA)) {
-    log(`could not open ${BIO_NPC.THESSALIA}'s shop`);
+  if (!await Shop.open(BIO_NPC.FANCY_DRESS)) {
+    log(`could not open ${BIO_NPC.FANCY_DRESS}'s shop`);
     return false;
   }
   let bought = 0;
@@ -42518,7 +42520,7 @@ async function buyPriestSuit(log) {
   }
   await Shop.close();
   if (bought === 0) {
-    log("Thessalia sold no priest gown — out of stock or out of coins");
+    log("the Fancy dress shop sold no priest gown — out of stock or out of coins");
   }
   return bought > 0;
 }
@@ -42820,9 +42822,6 @@ function outsideQuarterStep(snap, area2) {
   if (VIALS.some((vial) => held(snap, vial) > 0)) {
     return custom("give the errand boys their vials", handToErrandBoys);
   }
-  if (!ownsAll(snap, PRIEST_SUIT2)) {
-    return sourceCoins(snap, PRIEST_SUIT_GP) ?? custom("buy a priest gown from Thessalia", buyPriestSuit);
-  }
   const suit = reclaim(snap, BIO_ITEM.PRIEST_GOWN) ?? reclaim(snap, BIO_ITEM.PRIEST_ROBE);
   return suit ?? custom("walk through the gate to Varrock's east quarter", crossEastGate);
 }
@@ -42839,7 +42838,11 @@ function inQuarterStep(snap) {
   if (VIALS.some((vial) => held(snap, vial) === 0)) {
     return snap.noProgress >= COLLECT_GIVE_UP ? outside("ask Elena to replace the vials the errand boys ruined", askElenaForReplacements) : custom("collect the vials at the Dancing Donkey", collectFromErrandBoys);
   }
-  return custom("take the kit to Guidor", visitGuidor);
+  if (!ownsAll(snap, PRIEST_SUIT2)) {
+    return sourceCoins(snap, PRIEST_SUIT_GP) ?? custom("buy a priest gown from the Fancy dress shop", buyPriestSuit);
+  }
+  const suit = reclaim(snap, BIO_ITEM.PRIEST_GOWN) ?? reclaim(snap, BIO_ITEM.PRIEST_ROBE);
+  return suit ?? custom("take the kit to Guidor", visitGuidor);
 }
 function smuggleStep(snap, area2) {
   if (inGuidorQuarter(snap.tile)) {
