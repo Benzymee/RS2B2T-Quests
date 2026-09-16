@@ -40117,8 +40117,8 @@ var UNIVERSAL_GATHERERS = {
     kind: "buy",
     item: "Iron chainbody",
     qty,
-    shop: ANCHORS.HORVIK_ARMOUR_SHOP,
-    estGp: 200 * qty
+    shop: ANCHORS.WAYNE_CHAINS,
+    estGp: 300 * qty
   }),
   "bronze med helm": (_snap, qty) => ({
     kind: "buy",

@@ -42981,19 +42981,6 @@ async function wearKhazard(log) {
   return ok;
 }
 var unwearable = new Set;
-async function wearKit(names, log) {
-  for (const name of names) {
-    if (Equipment.contains(name)) {
-      continue;
-    }
-    if (!await Equipment.equip(name)) {
-      log(`cannot wear ${name} — level or quest requirement; leaving it behind`);
-      unwearable.add(name.toLowerCase());
-    }
-    await Execution.delayTicks(1);
-  }
-  return true;
-}
 async function wearCombat(log) {
   const wanted = combatSwap(packIds());
   if (wanted.length === 0) {
@@ -43226,29 +43213,23 @@ function kitWanted(snap) {
   }
   return out;
 }
-function kitStep(snap) {
+function withdrawKit(snap) {
   const wanted = kitWanted(snap);
   if (wanted.length === 0) {
-    return snap.bankKnown ? null : { kind: "scanBank", bank: FA_TILE.YANILLE_BANK };
+    return null;
   }
-  const carried = wanted.filter((name) => (snap.inv.get(name.toLowerCase()) ?? 0) > 0);
-  if (carried.length > 0) {
-    return custom(`wear ${carried.join(", ")}`, (log) => wearKit(carried, log));
+  const missing = wanted.filter((name) => (snap.inv.get(name.toLowerCase()) ?? 0) === 0);
+  if (missing.length === 0) {
+    return null;
   }
   if (!snap.bankKnown) {
     return { kind: "scanBank", bank: FA_TILE.YANILLE_BANK };
   }
-  return { kind: "withdraw", items: wanted.map((name) => ({ name, qty: 1 })), bank: FA_TILE.YANILLE_BANK };
+  return { kind: "withdraw", items: missing.map((name) => ({ name, qty: 1 })), bank: FA_TILE.YANILLE_BANK };
 }
 function outsideStep(snap, stage) {
   if (stage <= FA_STAGE.NOT_STARTED || stage >= FA_STAGE.FREED_SERVILS) {
     return { kind: "talk", stop: LADY_SERVIL };
-  }
-  if (!disguised2(snap)) {
-    const kit = kitStep(snap);
-    if (kit) {
-      return kit;
-    }
   }
   if (stage >= FA_STAGE.SENT_JAIL) {
     return KNOCK_FOR_GUARD;
@@ -43261,6 +43242,10 @@ function outsideStep(snap, stage) {
   }
   if (!disguised2(snap)) {
     return WEAR_DISGUISE;
+  }
+  const kit = withdrawKit(snap);
+  if (kit) {
+    return kit;
   }
   return ENTER_BUILDING;
 }
