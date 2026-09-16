@@ -41772,10 +41772,12 @@ var FC_NPC = {
 };
 var FC_SHOP = {
   AUBURY: { npc: "Aubury", anchor: new Tile(3253, 3401, 0) },
+  AEMAD: { npc: "Aemad", anchor: new Tile(2613, 3294, 0) },
   DOMMIK: { npc: "Dommik", anchor: new Tile(3322, 3194, 0) },
   GEM_MERCHANT: { npc: "Gem merchant", anchor: new Tile(2669, 3303, 0) },
   JIMINUA: { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) },
-  NURMOF: { npc: "Nurmof", anchor: new Tile(2997, 9844, 0) }
+  NURMOF: { npc: "Nurmof", anchor: new Tile(2997, 9844, 0) },
+  ROMMIK: { npc: "Rommik", anchor: new Tile(2949, 3205, 0) }
 };
 var FC_LOC = {
   MINE_LADDER: new Tile(2696, 3282, 0),
@@ -43958,6 +43960,43 @@ function source(snap, item, qty, bank, shop, estGp) {
   }
   return { kind: "wait", reason: `need ${short}x ${item.name} — none in the bank and nothing sells it` };
 }
+function kandarinSurface(tile) {
+  return !!tile && tile.level === 0 && tile.x < 2800 && tile.z > 3000 && tile.z < 3600;
+}
+function mineKitBank(snap) {
+  return kandarinSurface(snap.tile) ? LEG_BANK.mine : LEG_BANK.boot;
+}
+function sourceMoulds(snap, haveRing, haveNecklace, shop, bank) {
+  const wanted = [
+    [{ id: FC_ID.RING_MOULD, name: FC_ITEM.RING_MOULD }, haveRing ? 0 : 1],
+    [{ id: FC_ID.NECKLACE_MOULD, name: FC_ITEM.NECKLACE_MOULD }, haveNecklace ? 0 : 1]
+  ];
+  for (const [mould, qty] of wanted) {
+    if (qty === 0) {
+      continue;
+    }
+    const step = source(snap, mould, qty, bank, shop, MOULD_GP);
+    if (step) {
+      return step;
+    }
+  }
+  return null;
+}
+function sourcePickaxe(snap, bank) {
+  if (hasPickaxe(snap)) {
+    return null;
+  }
+  if (!snap.bankKnown) {
+    return scanBank(bank);
+  }
+  if (bestBankPickaxe(snap)) {
+    return fromBank(snap, bestBankPickaxe(snap), 1, bank);
+  }
+  if (kandarinSurface(snap.tile)) {
+    return { kind: "buy", item: "Bronze pickaxe", qty: 1, shop: SHOP.AEMAD, estGp: 60 };
+  }
+  return { kind: "buy", item: "Steel pickaxe", qty: 1, shop: SHOP.NURMOF, estGp: 2000 };
+}
 function sourceRunes(snap) {
   for (const want of BLAST_RUNES) {
     if (held(snap, want.item.id) >= Math.ceil(want.qty / 3)) {
@@ -44092,6 +44131,10 @@ function decide(snap) {
     return custom("ask Avan about the crest", (log) => talkToAvan(["I'm looking for a man named Avan Fitzharmon."], log));
   }
   if (stage === FC_STAGE.SPOKEN_AVAN) {
+    const moulds = sourceMoulds(snap, false, false, SHOP.DOMMIK, LEG_BANK.alkharid);
+    if (moulds) {
+      return moulds;
+    }
     return { kind: "talk", stop: BOOT };
   }
   if (stage === FC_STAGE.SPOKEN_BOOT) {
@@ -44111,43 +44154,39 @@ function decide(snap) {
       return custom("climb out of the gold mine", leaveGoldMine);
     }
     if (supply < outstanding) {
+      const kitBank = mineKitBank(snap);
       if (!snap.bankKnown && (!hasPickaxe(snap) || !hasWeapon(snap) || heldFood(snap) === 0)) {
-        return { kind: "scanBank", bank: LEG_BANK.mine };
+        return { kind: "scanBank", bank: kitBank };
       }
-      const pickaxe = hasPickaxe(snap) ? null : bestBankPickaxe(snap) ? fromBank(snap, bestBankPickaxe(snap), 1, LEG_BANK.mine) : { kind: "buy", item: "Steel pickaxe", qty: 1, shop: SHOP.NURMOF, estGp: 2000 };
+      const pickaxe = sourcePickaxe(snap, kitBank);
       if (pickaxe) {
         return pickaxe;
       }
-      const food = foodTopUp(snap, 10, LEG_BANK.mine);
+      const food = foodTopUp(snap, 10, kitBank);
       if (food) {
         return food;
       }
-      const arm = wieldWeapon(snap, LEG_BANK.mine);
+      const arm = wieldWeapon(snap, kitBank);
       if (arm) {
         return arm;
       }
+      const moulds = sourceMoulds(snap, haveRing, haveNecklace, SHOP.ROMMIK, kitBank);
+      if (moulds) {
+        return moulds;
+      }
       return custom("climb down into the perfect-gold mine", enterGoldMine);
     }
-    const legCoins = coinTopUp(snap, 50000, LEG_BANK.gold);
+    const legCoins = coinTopUp(snap, 50000, LEG_BANK.mine);
     if (legCoins) {
       return legCoins;
     }
-    const moulds = [
-      [{ id: FC_ID.RING_MOULD, name: FC_ITEM.RING_MOULD }, haveRing ? 0 : 1],
-      [{ id: FC_ID.NECKLACE_MOULD, name: FC_ITEM.NECKLACE_MOULD }, haveNecklace ? 0 : 1]
-    ];
-    for (const [mould, qty] of moulds) {
-      if (qty === 0) {
-        continue;
-      }
-      const step = source(snap, mould, qty, LEG_BANK.gold, SHOP.DOMMIK, MOULD_GP);
-      if (step) {
-        return step;
-      }
+    const moulds = sourceMoulds(snap, haveRing, haveNecklace, SHOP.ROMMIK, LEG_BANK.mine);
+    if (moulds) {
+      return moulds;
     }
     const rubyShort = outstanding - held(snap, FC_ID.RUBY);
     if (rubyShort > 0) {
-      const banked2 = fromBank(snap, { id: FC_ID.RUBY, name: FC_ITEM.RUBY }, outstanding, LEG_BANK.gold);
+      const banked2 = fromBank(snap, { id: FC_ID.RUBY, name: FC_ITEM.RUBY }, outstanding, LEG_BANK.mine);
       if (banked2) {
         return banked2;
       }
