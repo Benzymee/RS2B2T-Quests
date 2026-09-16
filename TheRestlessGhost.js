@@ -41588,7 +41588,7 @@ var URHNEY = {
 };
 var GHOST_PREFER = ["Yep, now tell me what the problem is."];
 var COFFIN_STAND = new Tile(3250, 3193, 0);
-var SKULL_TILE = new Tile(3120, 9565, 0);
+var SKULL_TILE = new Tile(3120, 9567, 0);
 async function ensureCoffinOpen(_log) {
   const shut = Locs.query().name("Coffin").action("Open").within(6).nearest();
   if (shut) {
@@ -41645,6 +41645,9 @@ async function returnSkull(log) {
   }
   return Execution.delayUntil(() => !Inventory.contains(SKULL), 8000);
 }
+function bankedName(snap, name) {
+  return snap.bank?.get(name.toLowerCase()) ?? 0;
+}
 function decide2(snap) {
   if (snap.journal === "complete") {
     return { kind: "done" };
@@ -41658,8 +41661,14 @@ function decide2(snap) {
   if (snap.inv.has("skull")) {
     return { kind: "custom", name: "return skull", run: returnSkull };
   }
+  if (snap.bankKnown && bankedName(snap, SKULL) > 0) {
+    return { kind: "withdraw", items: [{ name: SKULL, qty: 1 }], bank: new Tile(3093, 3243, 0) };
+  }
   const amuletLower = AMULET.toLowerCase();
   if (!snap.inv.has(amuletLower) && !snap.worn.has(amuletLower)) {
+    if (snap.bankKnown && bankedName(snap, AMULET) > 0) {
+      return { kind: "withdraw", items: [{ name: AMULET, qty: 1 }], bank: new Tile(3093, 3243, 0) };
+    }
     return { kind: "talk", stop: URHNEY };
   }
   if (!snap.worn.has(amuletLower)) {
