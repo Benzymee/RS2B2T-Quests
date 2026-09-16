@@ -42319,6 +42319,9 @@ function suppliesStep(snap, wants) {
   if (needBow && axeOutstanding(snap)) {
     return { kind: "buy", item: IKOV_NAME.IRON_AXE, qty: 1, shop: { npc: "Aemad", anchor: IKOV_TILE.AEMAD }, estGp: AXE_GP };
   }
+  if (needBow && heldOrBanked(snap, IKOV_OBJ.UNSTRUNG_YEW_SHORTBOW) === 0 && heldOrBanked(snap, IKOV_OBJ.KNIFE) === 0) {
+    return { kind: "grabGround", item: IKOV_NAME.KNIFE, anchor: IKOV_TILE.KNIFE_SPAWN, waitIfMissing: true };
+  }
   if (wants.candle && !kitCandleReady(snap)) {
     if (heldOrBanked(snap, IKOV_OBJ.TINDERBOX) === 0) {
       return { kind: "buy", item: IKOV_NAME.TINDERBOX, qty: 1, shop: { npc: "Arhein", anchor: IKOV_TILE.ARHEIN }, estGp: 100 };
@@ -42356,12 +42359,19 @@ function bowChainStep(snap) {
     ]);
     return carry ?? { kind: "custom", name: "string the yew shortbow", run: stringBow };
   }
+  if (stave === 0 && heldOrBanked(snap, IKOV_OBJ.KNIFE) === 0) {
+    return { kind: "grabGround", item: IKOV_NAME.KNIFE, anchor: IKOV_TILE.KNIFE_SPAWN, waitIfMissing: true };
+  }
   if (stave === 0 && heldOrBanked(snap, IKOV_OBJ.YEW_LOGS) === 0) {
     const axe = withdrawMissing(snap, [{ name: IKOV_NAME.IRON_AXE, id: IKOV_OBJ.IRON_AXE }]);
     return axe ?? { kind: "custom", name: "chop a yew log", run: chopYew };
   }
-  if (heldOrBanked(snap, IKOV_OBJ.KNIFE) === 0) {
-    return { kind: "grabGround", item: IKOV_NAME.KNIFE, anchor: IKOV_TILE.KNIFE_SPAWN, waitIfMissing: true };
+  if (stave === 0) {
+    const kit = withdrawMissing(snap, [
+      { name: IKOV_NAME.YEW_LOGS, id: IKOV_OBJ.YEW_LOGS },
+      { name: IKOV_NAME.KNIFE, id: IKOV_OBJ.KNIFE }
+    ]);
+    return kit ?? { kind: "custom", name: "fletch a yew shortbow", run: fletchBow };
   }
   if (string === 0) {
     if (heldOrBanked(snap, IKOV_OBJ.FLAX) === 0) {
@@ -42379,13 +42389,6 @@ function bowChainStep(snap) {
       anchor: IKOV_TILE.SPINNING_WHEEL,
       product: IKOV_NAME.BOW_STRING
     };
-  }
-  if (stave === 0) {
-    const kit = withdrawMissing(snap, [
-      { name: IKOV_NAME.YEW_LOGS, id: IKOV_OBJ.YEW_LOGS },
-      { name: IKOV_NAME.KNIFE, id: IKOV_OBJ.KNIFE }
-    ]);
-    return kit ?? { kind: "custom", name: "fletch a yew shortbow", run: fletchBow };
   }
   return null;
 }
