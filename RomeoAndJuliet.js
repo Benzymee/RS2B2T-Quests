@@ -41593,7 +41593,7 @@ var JULIET = {
   npc: "Juliet",
   anchor: new Tile(3158, 3425, 1),
   leash: 6,
-  prefer: []
+  prefer: ["I guess I could find him.", "Certainly, I will do so straight away!"]
 };
 var LAWRENCE = {
   npc: "Father Lawrence",
@@ -41697,42 +41697,42 @@ function nearbyBerries() {
 }
 async function pickBerries(log) {
   if (Inventory.isFull()) {
-    log("stage 50: inventory is full; refusing to risk losing the berry pickup");
+    log("cadava: inventory is full; refusing to risk losing the berry pickup");
     return false;
   }
   const before = Inventory.countById(ROMEO_JULIET_ITEM.BERRIES.id);
   let berry = nearbyBerries();
   if (!berry) {
-    log("stage 50: walking to the three Cadava berry ground spawns");
+    log("cadava: walking to the three Cadava berry ground spawns");
     if (!await Traversal.walkResilient(BERRY_ANCHOR, { radius: 3, attempts: 3, timeoutMs: 120000, log })) {
-      log("stage 50: could not reach the Cadava berry spawn area");
+      log("cadava: could not reach the Cadava berry spawn area");
       return false;
     }
     berry = nearbyBerries();
   }
   if (!berry) {
-    log("stage 50: all three Cadava berry spawns are empty; waiting up to 70 seconds for a respawn");
+    log("cadava: all three Cadava berry spawns are empty; waiting up to 70 seconds for a respawn");
     const appeared = await Execution.delayUntil(() => nearbyBerries() !== null, BERRY_RESPAWN_MS);
     if (!appeared) {
-      log("stage 50: no Cadava berry respawn appeared within 70 seconds");
+      log("cadava: no Cadava berry respawn appeared within 70 seconds");
       return false;
     }
     berry = nearbyBerries();
   }
   if (!berry) {
-    log("stage 50: a Cadava berry appeared but another player took it first; retrying");
+    log("cadava: a Cadava berry appeared but another player took it first; retrying");
     return false;
   }
-  log("stage 50: taking a Cadava berry from the ground spawn");
+  log("cadava: taking a Cadava berry from the ground spawn");
   if (!await berry.interact("Take")) {
-    log("stage 50: the Cadava berry pickup action failed or lost a player race");
+    log("cadava: the Cadava berry pickup action failed or lost a player race");
     return false;
   }
   const obtained = await Execution.delayUntil(() => Inventory.countById(ROMEO_JULIET_ITEM.BERRIES.id) > before, 8000);
   if (!obtained) {
-    log("stage 50: the pickup completed without a Cadava berry entering the inventory");
+    log("cadava: the pickup completed without a Cadava berry entering the inventory");
   } else {
-    log("stage 50: acquired a Cadava berry");
+    log("cadava: acquired a Cadava berry");
   }
   return obtained;
 }
@@ -41754,6 +41754,33 @@ function stageTwenty(snap) {
     };
   }
   return talkAtStage(20, "ask Juliet to replace the lost message", JULIET);
+}
+function stageForty(snap) {
+  if (held(snap, ROMEO_JULIET_ITEM.POTION) || held(snap, ROMEO_JULIET_ITEM.BERRIES)) {
+    return talkAtStage(40, "ask the Apothecary for a Cadava potion", APOTHECARY);
+  }
+  if (snap.freeSlots === 0) {
+    return clearFullPack();
+  }
+  if (snap.bankKnown && banked(snap, ROMEO_JULIET_ITEM.POTION) > 0) {
+    return {
+      kind: "withdraw",
+      items: [{ ...ROMEO_JULIET_ITEM.POTION, qty: 1 }],
+      bank: VARROCK_WEST_BANK
+    };
+  }
+  if (snap.bankKnown && banked(snap, ROMEO_JULIET_ITEM.BERRIES) > 0) {
+    return {
+      kind: "withdraw",
+      items: [{ ...ROMEO_JULIET_ITEM.BERRIES, qty: 1 }],
+      bank: VARROCK_WEST_BANK
+    };
+  }
+  return {
+    kind: "custom",
+    name: "stage 40: collect Cadava berries before the Apothecary",
+    run: pickBerries
+  };
 }
 function stageFifty(snap) {
   if (held(snap, ROMEO_JULIET_ITEM.POTION)) {
@@ -41800,7 +41827,7 @@ function decide(snap) {
   }
   switch (snap.stage) {
     case ROMEO_JULIET_STAGE.NOT_STARTED:
-      return talkAtStage(0, "ask Romeo how to help find Juliet", ROMEO);
+      return snap.freeSlots === 0 ? clearFullPack() : talkAtStage(0, "ask Juliet to send Romeo a message", JULIET);
     case ROMEO_JULIET_STAGE.SPOKEN_TO_ROMEO:
       return snap.freeSlots === 0 ? clearFullPack() : talkAtStage(10, "ask Juliet for Romeo's message", JULIET);
     case ROMEO_JULIET_STAGE.SPOKEN_TO_JULIET:
@@ -41808,7 +41835,7 @@ function decide(snap) {
     case ROMEO_JULIET_STAGE.PASSED_MESSAGE:
       return talkAtStage(30, "ask Father Lawrence for help", LAWRENCE);
     case ROMEO_JULIET_STAGE.SPOKEN_TO_FATHER:
-      return talkAtStage(40, "ask the Apothecary for a Cadava potion", APOTHECARY);
+      return stageForty(snap);
     case ROMEO_JULIET_STAGE.SPOKEN_TO_APOTHECARY:
       return stageFifty(snap);
     case ROMEO_JULIET_STAGE.JULIET_IN_CRYPT:

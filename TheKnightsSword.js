@@ -41218,6 +41218,7 @@ var KS_TILE = {
   KITCHEN_SINK: new Tile(3224, 3494, 0),
   WYDIN: new Tile(3014, 3204, 0),
   RANGE: new Tile(3019, 3237, 0),
+  BUCKET_SPAWN: new Tile(3225, 3294, 0),
   IRON_ROCKS: new Tile(2972, 3239, 0),
   PICKAXE_SPAWN: new Tile(2963, 3216, 0),
   LADDER_BOTTOM: new Tile(3008, 9551, 0)
@@ -42690,11 +42691,11 @@ function pie(snap) {
   if (!snap.bankKnown && !hasFinishedPie && !hasAllIngredients) {
     return scanBank;
   }
-  if (heldId(snap, KS_ID.BUCKET_OF_WATER) === 0) {
-    return heldId(snap, KS_ID.BUCKET) > 0 ? { kind: "custom", name: "fill the bucket", run: fillBucket } : buy(KS_NAME.BUCKET, GENERAL_STORE);
-  }
   if (heldId(snap, KS_ID.PIE_DISH) === 0) {
     return pieDish(snap);
+  }
+  if (heldId(snap, KS_ID.BUCKET_OF_WATER) === 0) {
+    return heldId(snap, KS_ID.BUCKET) > 0 ? { kind: "custom", name: "fill the bucket", run: fillBucket } : { kind: "grabGround", item: KS_NAME.BUCKET, anchor: KS_TILE.BUCKET_SPAWN, waitIfMissing: true };
   }
   if (heldId(snap, KS_ID.POT_OF_FLOUR) === 0) {
     return buy(KS_NAME.POT_OF_FLOUR, WYDIN);
@@ -42844,9 +42845,9 @@ function decideAt(snap, miningLevel) {
     case KS_STAGE.GIVEN_PIE:
       return talk(THURGO);
     case KS_STAGE.SPOKEN_THURGO:
-      return talk(SQUIRE);
+      return ironBarsAt(snap, miningLevel) ?? talk(SQUIRE);
     case KS_STAGE.LOOKING_PORTRAIT:
-      return heldId(snap, KS_ID.PORTRAIT) > 0 ? talk(THURGO) : { kind: "custom", name: "take the portrait", run: fetchPortrait };
+      return ironBarsAt(snap, miningLevel) ?? (heldId(snap, KS_ID.PORTRAIT) > 0 ? talk(THURGO) : { kind: "custom", name: "take the portrait", run: fetchPortrait });
     case KS_STAGE.LOOKING_BLURITE:
       return materials(snap, miningLevel);
     default:
