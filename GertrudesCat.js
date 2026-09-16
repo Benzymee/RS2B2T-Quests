@@ -40826,7 +40826,11 @@ var QUESTS = [
     name: "Gertrude's Cat",
     questPoints: 1,
     requirements: {},
-    items: []
+    items: [
+      { name: "Raw sardine", qty: 1, kind: "acquirable" },
+      { name: "Bucket of milk", qty: 1, kind: "acquirable" },
+      { name: "Doogle leaves", qty: 1, kind: "acquirable" }
+    ]
   },
   {
     id: "grail",
@@ -42215,13 +42219,23 @@ function gatherSeasonedSardine(snap) {
   if ((snap.invIds?.get(FLUFFS_OBJ.seasonedSardine) ?? 0) > 0) {
     return null;
   }
-  if ((snap.invIds?.get(FLUFFS_OBJ.doogleLeaves) ?? 0) === 0) {
-    return { kind: "grabGround", item: "Doogle leaves", anchor: DOOGLE_WOODS, waitIfMissing: true };
-  }
   if ((snap.invIds?.get(FLUFFS_OBJ.rawSardine) ?? 0) === 0) {
     return { kind: "buy", item: "Raw sardine", qty: 1, shop: SARDINE_SHOP, estGp: SARDINE_GP };
   }
+  if ((snap.invIds?.get(FLUFFS_OBJ.doogleLeaves) ?? 0) === 0) {
+    return { kind: "grabGround", item: "Doogle leaves", anchor: DOOGLE_WOODS, waitIfMissing: true };
+  }
   return { kind: "custom", name: "season the sardine with doogle leaves", run: seasonSardine };
+}
+function gatherFluffsKit(snap) {
+  const sardine = gatherSeasonedSardine(snap);
+  if (sardine !== null && (snap.invIds?.get(FLUFFS_OBJ.rawSardine) ?? 0) === 0 && (snap.invIds?.get(FLUFFS_OBJ.seasonedSardine) ?? 0) === 0) {
+    return sardine;
+  }
+  if (!snap.inv.has("bucket of milk")) {
+    return gatherMilk(snap);
+  }
+  return sardine;
 }
 function decide2(snap) {
   if (snap.journal === "complete") {
@@ -42231,6 +42245,10 @@ function decide2(snap) {
     return { kind: "wait", reason: "quest journal not loaded" };
   }
   if (snap.journal === "notStarted") {
+    const kit = gatherFluffsKit(snap);
+    if (kit !== null) {
+      return kit;
+    }
     return { kind: "talk", stop: GERTRUDE };
   }
   const progress = snap.progress;
@@ -42245,12 +42263,9 @@ function decide2(snap) {
       return { kind: "custom", name: "buy the play area out of Shilop", run: payBrothers };
     }
     case FLUFFS_STAGE.PAID_BOY: {
-      const sardine = gatherSeasonedSardine(snap);
-      if (sardine !== null) {
-        return sardine;
-      }
-      if (!snap.inv.has("bucket of milk")) {
-        return gatherMilk(snap);
+      const kit = gatherFluffsKit(snap);
+      if (kit !== null) {
+        return kit;
       }
       return { kind: "custom", name: "give Fluffs the milk", run: offerToCat(FLUFFS_OBJ.bucketOfMilk, "bucket of milk") };
     }
@@ -42278,6 +42293,10 @@ var gertrudescat = {
   bank: BANK,
   food: 4,
   tools: ["coins", "bucket", "doogle leaves", "sardine", "fluffs' kitten"],
+  gather: {
+    "raw sardine": (_snap, qty) => ({ kind: "buy", item: "Raw sardine", qty, shop: SARDINE_SHOP, estGp: SARDINE_GP }),
+    "doogle leaves": () => ({ kind: "grabGround", item: "Doogle leaves", anchor: DOOGLE_WOODS, waitIfMissing: true })
+  },
   readProgress: readGertrudesCatProgress,
   decide: decide2
 };
