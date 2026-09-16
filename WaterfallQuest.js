@@ -43547,7 +43547,7 @@ function normalizeLoadout(snap, keepIds, name, bank = ARDOUGNE_BANK) {
   const normalizedKeepIds = hasExcess || hasEquipment ? [] : keepIds;
   return { kind: "custom", name, run: (log) => stripAndDeposit(normalizedKeepIds, log, bank) };
 }
-var START_KEEP = [ITEM.COINS.id, ITEM.ROPE.id];
+var START_KEEP = [ITEM.COINS.id, ITEM.ROPE.id, ITEM.AIR_RUNE.id, ITEM.EARTH_RUNE.id, ITEM.WATER_RUNE.id];
 var BOOK_TRAVEL_KEEP = [...START_KEEP, ITEM.BOOK.id];
 var TOMB_KEEP = [
   ITEM.COINS.id,
@@ -44047,12 +44047,15 @@ function stageZero(snap, area) {
   const cash = ensureCoins(snap, remainingWaterfallCash(snap), bank);
   if (cash)
     return cash;
-  const food = sourceFood(snap, bank);
-  if (food)
-    return food;
   const rope = sourceRope(snap, bank);
   if (rope)
     return rope;
+  const runes = sourcePuzzleRunes(snap);
+  if (runes)
+    return runes;
+  const food = sourceFood(snap, bank);
+  if (food)
+    return food;
   return { kind: "talk", stop: ALMERA };
 }
 function stageTwo(snap, area) {

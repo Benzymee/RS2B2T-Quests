@@ -41840,7 +41840,7 @@ var RAT_GATE_OP = "Go-through";
 var RAT_GATE_REFUSED = /does not seem to be openable/i;
 var SECRET_WALL = 1586;
 var COLOURS = ["blue", "black", "white", "red"];
-var FETCH_ORDER = ["black", "red", "blue", "white"];
+var FETCH_ORDER = ["red", "white", "blue", "black"];
 var BUCKET = "Bucket";
 var WATER = "Bucket of water";
 var KOJO = {
@@ -42287,7 +42287,7 @@ function decide(snap) {
   if (next2 === undefined) {
     return { kind: "talk", stop: KOJO };
   }
-  if (next2 === "black" && !snap.inv.has(WATER.toLowerCase())) {
+  if ((next2 === "blue" || next2 === "black") && !snap.inv.has(WATER.toLowerCase())) {
     return gatherWater(snap);
   }
   return { kind: "custom", name: `fetch the ${next2} cog`, run: fetchLeg(next2) };
