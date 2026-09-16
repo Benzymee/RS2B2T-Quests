@@ -41440,7 +41440,7 @@ var OBS_TILE = {
     new Tile(2554, 3574, 0),
     new Tile(2556, 3573, 0)
   ],
-  SEAWEED_SPAWN: new Tile(2708, 3728, 0),
+  SEAWEED_SPAWN: new Tile(2834, 3427, 0),
   MINE: new Tile(2631, 3146, 0),
   FURNACE: new Tile(2600, 3310, 0),
   RANGE_LOC: CATHERBY_RANGE.loc,
