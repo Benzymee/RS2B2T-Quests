@@ -42032,7 +42032,10 @@ function decideForMiningLevel(snap, miningLevel) {
     return { kind: "wait", reason: "Doric's Quest stage unavailable" };
   switch (snap.stage) {
     case DORIC_STAGE.NOT_STARTED:
-      return talkAtStage(0, "ask Doric to use his anvils and accept the materials job");
+      if (!allMaterialsHeld(snap)) {
+        return stageTen(snap, miningLevel);
+      }
+      return talkAtStage(0, "ask Doric to use his anvils with the Rimmington ores already in the pack");
     case DORIC_STAGE.STARTED:
       return stageTen(snap, miningLevel);
     default:

@@ -43973,16 +43973,16 @@ function sourceRunes(snap) {
 }
 var ANTIPOISON_CARRY = 2;
 var ENDGAME_FOOD = 16;
-function sourceAntipoison(snap, want) {
+function sourceAntipoison(snap, want, bank = LEG_BANK.chronozon) {
   if (heldAntipoison(snap) >= want) {
     return null;
   }
   if (!snap.bankKnown) {
-    return { kind: "scanBank", bank: LEG_BANK.chronozon };
+    return { kind: "scanBank", bank };
   }
   const inBank = bankedAntipoison(snap);
   if (inBank) {
-    const step = fromBank(snap, inBank, want, LEG_BANK.chronozon);
+    const step = fromBank(snap, inBank, want, bank);
     if (step) {
       return step;
     }
@@ -43997,7 +43997,7 @@ function endgameLoadout(snap) {
   if (runes) {
     return coinTopUp(snap, 150000, LEG_BANK.chronozon) ?? runes;
   }
-  const potions = sourceAntipoison(snap, ANTIPOISON_CARRY);
+  const potions = sourceAntipoison(snap, ANTIPOISON_CARRY, LEG_BANK.chronozon);
   if (potions) {
     return potions;
   }
@@ -44007,7 +44007,7 @@ function endgameLoadout(snap) {
   }
   return wieldWeapon(snap, LEG_BANK.chronozon);
 }
-var ALWAYS_KEEP = ["coins", ...FC_FOODS.map((f) => f.toLowerCase())];
+var ALWAYS_KEEP = ["coins", "antipoison", ...FC_FOODS.map((f) => f.toLowerCase())];
 var WILDERNESS_KEEP = [
   ...FC_FOODS.map((f) => f.toLowerCase()),
   ...BLAST_RUNES.map((r) => r.item.name.toLowerCase()),
@@ -44086,6 +44086,10 @@ function decide(snap) {
     return { kind: "talk", stop: CALEB_FISH_STOP };
   }
   if (stage === FC_STAGE.CALEB_WHERE) {
+    const potions = sourceAntipoison(snap, ANTIPOISON_CARRY, LEG_BANK.caleb);
+    if (potions) {
+      return potions;
+    }
     return { kind: "talk", stop: GEM_TRADER };
   }
   if (stage === FC_STAGE.SPOKEN_GEM_TRADER) {
@@ -44098,6 +44102,10 @@ function decide(snap) {
     const haveRing = held(snap, FC_ID.PERFECT_RUBY_RING) > 0;
     const haveNecklace = held(snap, FC_ID.PERFECT_RUBY_NECKLACE) > 0;
     if (haveRing && haveNecklace) {
+      const potions = sourceAntipoison(snap, ANTIPOISON_CARRY, LEG_BANK.mine);
+      if (potions) {
+        return potions;
+      }
       return custom("hand Avan the perfect jewellery", (log) => talkToAvan([], log));
     }
     const inMine = mineRegion(snap.tile) !== "outside";
@@ -44173,7 +44181,7 @@ function decide(snap) {
   }
   if (stage === FC_STAGE.SPOKEN_JOHNATHON) {
     if (heldAntipoison(snap) === 0) {
-      const potions = sourceAntipoison(snap, ANTIPOISON_CARRY);
+      const potions = sourceAntipoison(snap, ANTIPOISON_CARRY, LEG_BANK.chronozon);
       if (potions) {
         return potions;
       }
