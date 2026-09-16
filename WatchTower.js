@@ -34959,6 +34959,10 @@ var SPECIAL_CROSSINGS = [
     arrivalRadius: 0,
     label: "Yanille dungeon balancing ledge (S→N)"
   },
+  { x: 2597, z: 3087, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door" },
+  { x: 2597, z: 3088, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door" },
+  { x: 2584, z: 3087, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door (west)" },
+  { x: 2584, z: 3088, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door (west)" },
   {
     x: 2504,
     z: 3192,
@@ -40617,7 +40621,7 @@ var QUESTS = [
     items: [
       { name: "Dragon bones", qty: 1, kind: "mustHave" },
       { name: "Guam leaf", qty: 1, kind: "mustHave" },
-      { name: "Bat bones", qty: 1, kind: "mustHave" },
+      { name: "Bat bones", qty: 1, kind: "acquirable" },
       { name: "Gold bar", qty: 1, kind: "acquirable" }
     ]
   },
@@ -41261,6 +41265,7 @@ var WT_NPC = {
 };
 var WT_TILE = {
   YANILLE_BANK: new Tile(2612, 3092, 0),
+  DUNGEON_BATS: new Tile(2571, 9525, 0),
   GOLD_ROCKS: new Tile(2733, 3224, 0),
   ARDOUGNE_FURNACE: new Tile(2601, 3310, 0),
   WALL_CLIMB_STAND: new Tile(2548, 3120, 0),
@@ -43051,7 +43056,9 @@ var QuestFood = { name: "Trout" };
 // src/bot/api/ai/quests/defs/watchtower/supplies.ts
 var ARDOUGNE_ADVENTURER = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
 var MAGIC_GUILD = { npc: "Magic Store owner", anchor: new Tile(2595, 3087, 1) };
+var BETTY = { npc: "Betty", anchor: new Tile(3014, 3258, 0) };
 var OGRE_HERBLORE = { npc: "Ogre merchant", anchor: new Tile(2528, 3048, 0) };
+var MAGIC_GUILD_LEVEL = 66;
 var ROPE_PRICE = 60;
 var DEATH_RUNE_PRICE = 120;
 var VIAL_PRICE = 20;
@@ -43129,14 +43136,62 @@ function sourceCoins(snap, want) {
 function sourceRope(snap) {
   return source(snap, WT_ITEM.ROPE, 1, ARDOUGNE_ADVENTURER, ROPE_PRICE);
 }
+function deathRuneShop() {
+  return Skills.level("magic") >= MAGIC_GUILD_LEVEL ? MAGIC_GUILD : BETTY;
+}
 function sourceDeathRune(snap) {
-  return source(snap, WT_ITEM.DEATH_RUNE, 1, MAGIC_GUILD, DEATH_RUNE_PRICE);
+  return source(snap, WT_ITEM.DEATH_RUNE, 1, deathRuneShop(), DEATH_RUNE_PRICE);
 }
 function sourceVial(snap) {
   return source(snap, WT_ITEM.VIAL_WATER, 1, ARDOUGNE_ADVENTURER, VIAL_PRICE);
 }
 function sourcePestle(snap) {
   return source(snap, WT_ITEM.PESTLE, 1, OGRE_HERBLORE, PESTLE_PRICE);
+}
+async function huntYanilleDungeonBat(log) {
+  if (heldId2(WT_ITEM.BAT_BONES.id) > 0) {
+    return true;
+  }
+  const drop = GroundItems.query().name(WT_ITEM.BAT_BONES.name).within(8).nearest();
+  if (drop) {
+    if (!await drop.interact("Take")) {
+      return false;
+    }
+    return Execution.delayUntil(() => heldId2(WT_ITEM.BAT_BONES.id) > 0, 6000);
+  }
+  if (!await Traversal.walkResilient(WT_TILE.DUNGEON_BATS, { radius: 6, attempts: 4, timeoutMs: 180000, log })) {
+    log(`watchtower: could not reach the Yanille dungeon bats at (${WT_TILE.DUNGEON_BATS.x},${WT_TILE.DUNGEON_BATS.z})`);
+    return false;
+  }
+  Game.setCombatStyle("strength");
+  const bat = Npcs.query().name("Giant bat").action("Attack").within(10).nearest();
+  if (!bat) {
+    log("watchtower: no Giant bat in the northern Yanille dungeon — the Agility 40 ledge bats are the wrong cluster");
+    return false;
+  }
+  await bat.interact("Attack");
+  await Execution.delayUntil(() => GroundItems.query().name(WT_ITEM.BAT_BONES.name).within(6).nearest() !== null || Npcs.query().name("Giant bat").within(2).nearest() === null, 8000);
+  await Sustain.run();
+  const bones = GroundItems.query().name(WT_ITEM.BAT_BONES.name).within(8).nearest();
+  if (bones) {
+    if (!await bones.interact("Take")) {
+      return false;
+    }
+    return Execution.delayUntil(() => heldId2(WT_ITEM.BAT_BONES.id) > 0, 6000);
+  }
+  return heldId2(WT_ITEM.BAT_BONES.id) > 0;
+}
+function sourceBatBones(snap) {
+  if (held(snap, WT_ITEM.BAT_BONES.id) > 0 || held(snap, WT_ITEM.GROUND_BAT_BONES.id) > 0) {
+    return null;
+  }
+  if (!snap.bankKnown) {
+    return scanBank();
+  }
+  if (banked(snap, WT_ITEM.BAT_BONES.id) > 0) {
+    return withdrawFrom([{ name: WT_ITEM.BAT_BONES.name, id: WT_ITEM.BAT_BONES.id, qty: 1 }]);
+  }
+  return { kind: "custom", name: "kill a Giant bat in the Yanille dungeon", run: huntYanilleDungeonBat };
 }
 function sourcePickaxe(snap) {
   return source(snap, WT_ITEM.PICKAXE, 1, ARDOUGNE_ADVENTURER, PICKAXE_PRICE);
@@ -43321,6 +43376,10 @@ function stageTribes(snap, area) {
   return escapePocket(area, "yanille") ?? { kind: "wait", reason: "every tribe is helped but no relic part is in the pack" };
 }
 function stageRelicGate(snap, area) {
+  const rune = sourceDeathRune(snap);
+  if (rune) {
+    return at(area, "yanille", rune);
+  }
   if (held(snap, WT_ITEM.OGRE_RELIC.id) > 0) {
     return escapePocket(area, "yanille") ?? { kind: "custom", name: "show the relic to the north-west ogre guard", run: showRelicToGuard };
   }
@@ -43412,9 +43471,9 @@ function stagePotion(snap, area) {
     return needRope(snap, area) ?? { kind: "custom", name: "pick jangerberries on Grew island", run: pickJangerberries };
   }
   if (held(snap, WT_ITEM.GROUND_BAT_BONES.id) === 0) {
-    const bones = bankOnly(snap, WT_ITEM.BAT_BONES);
+    const bones = sourceBatBones(snap);
     if (bones) {
-      return bones;
+      return at(area, "yanille", bones);
     }
     const pestle = sourcePestle(snap);
     if (pestle) {
@@ -43529,8 +43588,17 @@ function decide(snap) {
       }
       return escapePocket(area, "yanille") ?? { kind: "custom", name: "search the bush by the Watchtower for evidence", run: searchEvidenceBush };
     }
-    case WATCHTOWER_STAGE.GIVEN_FINGERNAILS:
+    case WATCHTOWER_STAGE.GIVEN_FINGERNAILS: {
+      const bones = sourceBatBones(snap);
+      if (bones) {
+        return at(area, "yanille", bones);
+      }
+      const rune = sourceDeathRune(snap);
+      if (rune) {
+        return at(area, "yanille", rune);
+      }
       return owned(snap, WT_ITEM.OGRE_RELIC.id) > 0 ? stageRelicGate(snap, area) : stageTribes(snap, area);
+    }
     case WATCHTOWER_STAGE.MADE_RELIC:
       return stageRelicGate(snap, area);
     case WATCHTOWER_STAGE.GIVEN_RELIC:
