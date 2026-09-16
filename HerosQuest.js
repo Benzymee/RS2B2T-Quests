@@ -42079,7 +42079,8 @@ var HERO_TILE = {
   DEEP_GATE: new Tile(2924, 9803, 0),
   DEEP_GATE_INNER: new Tile(2923, 9803, 0),
   LAVA_FISH: new Tile(2892, 9767, 0),
-  CATHERBY_RANGE: new Tile(2817, 3443, 0),
+  PORT_SARIM_RANGE: new Tile(3019, 3237, 0),
+  FALADOR_WATERPUMP: new Tile(2994, 3341, 0),
   WWM_LADDER: new Tile(2845, 3526, 0),
   WWM_DUNGEON: new Tile(2845, 9926, 0),
   ICE_QUEEN: new Tile(2866, 9955, 0),
@@ -44124,13 +44125,13 @@ async function cookLavaEel(log) {
   if (Inventory.countById(HERO_ID.LAVA_EEL) > 0) {
     return true;
   }
-  if (!await Traversal.walkResilient(HERO_TILE.CATHERBY_RANGE, { radius: 1, attempts: 3, timeoutMs: 300000, log })) {
+  if (!await Traversal.walkResilient(HERO_TILE.PORT_SARIM_RANGE, { radius: 1, attempts: 3, timeoutMs: 300000, log })) {
     return false;
   }
   const raw2 = liveItem(HERO_ID.RAW_LAVA_EEL);
   const range = Locs.query().name("Range").within(6).nearest();
   if (!raw2 || !range) {
-    log("no raw lava eel in the pack, or no Range within six tiles of the Catherby stand");
+    log("no raw lava eel in the pack, or no Range within six tiles of the Port Sarim stand");
     return false;
   }
   if (!await raw2.useOn(range)) {
@@ -44138,8 +44139,41 @@ async function cookLavaEel(log) {
   }
   return Execution.delayUntil(() => Inventory.countById(HERO_ID.LAVA_EEL) > 0, RANGE_MS);
 }
+async function fillVial(log) {
+  if (Inventory.countById(HERO_ID.VIAL_WATER) > 0) {
+    return true;
+  }
+  return useOnLoc(HERO_ID.VIAL_EMPTY, { name: "Waterpump", near: HERO_TILE.FALADOR_WATERPUMP }, [], () => Inventory.countById(HERO_ID.VIAL_WATER) > 0, log);
+}
 function askGerrantForSlime(log) {
   return talkUntil(GERRANT, GERRANT.prefer, () => Inventory.countById(HERO_ID.SLIME) > 0, log, 60000);
+}
+function sourceGerrantKit(snap) {
+  if (anywhere(snap, HERO_ID.OILY_ROD) > 0) {
+    return null;
+  }
+  if (heldId(snap, HERO_ID.SLIME) === 0 && anywhere(snap, HERO_ID.BLAMISH_OIL) === 0) {
+    return bankedId(snap, HERO_ID.SLIME) > 0 ? withdraw(HERO_NAMED.SLIME, 1, HERO_ID.SLIME) : { kind: "custom", name: "ask Gerrant for a jar of blamish slime", run: askGerrantForSlime };
+  }
+  if (heldId(snap, HERO_ID.FISHING_ROD) === 0) {
+    return bankedId(snap, HERO_ID.FISHING_ROD) > 0 ? withdraw(HERO_NAMED.FISHING_ROD, 1, HERO_ID.FISHING_ROD) : { kind: "buy", item: HERO_NAMED.FISHING_ROD, qty: 1, shop: HERO_SHOP.GERRANT, estGp: 200 };
+  }
+  if (heldId(snap, HERO_ID.FISHING_BAIT) === 0) {
+    return bankedId(snap, HERO_ID.FISHING_BAIT) > 0 ? withdraw(HERO_NAMED.FISHING_BAIT, BAIT_TARGET, HERO_ID.FISHING_BAIT) : { kind: "buy", item: HERO_NAMED.FISHING_BAIT, qty: BAIT_TARGET, shop: HERO_SHOP.GERRANT, estGp: 2000 };
+  }
+  return null;
+}
+function sourceVialOfWater(snap) {
+  if (bankedId(snap, HERO_ID.VIAL_WATER) > 0) {
+    return withdraw(HERO_NAMED.VIAL_WATER, 1, HERO_ID.VIAL_WATER);
+  }
+  if (heldId(snap, HERO_ID.VIAL_EMPTY) > 0) {
+    return { kind: "custom", name: "fill a vial at the Falador waterpump", run: fillVial };
+  }
+  if (bankedId(snap, HERO_ID.VIAL_EMPTY) > 0) {
+    return withdraw(HERO_NAMED.VIAL_EMPTY, 1, HERO_ID.VIAL_EMPTY);
+  }
+  return { kind: "buy", item: HERO_NAMED.VIAL_EMPTY, qty: 1, shop: HERO_SHOP.JATIX, estGp: 200 };
 }
 function keyStep(snap) {
   if (heldId(snap, HERO_ID.DUSTY_KEY) > 0) {
@@ -44158,10 +44192,14 @@ function eelStep(snap) {
     return null;
   }
   if (heldId(snap, HERO_ID.RAW_LAVA_EEL) > 0) {
-    return { kind: "custom", name: "cook the lava eel at Catherby", run: cookLavaEel };
+    return { kind: "custom", name: "cook the lava eel at Port Sarim", run: cookLavaEel };
   }
   if (bankedId(snap, HERO_ID.RAW_LAVA_EEL) > 0) {
     return withdraw(HERO_NAMED.RAW_LAVA_EEL, 1, HERO_ID.RAW_LAVA_EEL);
+  }
+  const gerrantKit = sourceGerrantKit(snap);
+  if (gerrantKit) {
+    return gerrantKit;
   }
   if (heldId(snap, HERO_ID.OILY_ROD) > 0) {
     if (heldId(snap, HERO_ID.FISHING_BAIT) === 0) {
@@ -44206,7 +44244,7 @@ function eelStep(snap) {
         run: (log) => combineById(HERO_ID.HARRALANDER, HERO_ID.VIAL_WATER, HERO_ID.HARRALANDER_VIAL, log)
       };
     }
-    return bankedId(snap, HERO_ID.VIAL_WATER) > 0 ? withdraw(HERO_NAMED.VIAL_WATER, 1, HERO_ID.VIAL_WATER) : { kind: "buy", item: HERO_NAMED.VIAL_WATER, qty: 1, shop: HERO_SHOP.AEMAD, estGp: 200 };
+    return sourceVialOfWater(snap);
   }
   if (bankedId(snap, HERO_ID.HARRALANDER) > 0) {
     return withdraw(HERO_NAMED.HARRALANDER, 1, HERO_ID.HARRALANDER);
