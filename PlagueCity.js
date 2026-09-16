@@ -41222,10 +41222,9 @@ var PC_TILE = {
   BUCKET_SPAWN: new Tile(2616, 3255, 0),
   COW_FIELD: new Tile(2664, 3346, 0),
   AEMAD: new Tile(2613, 3294, 0),
+  HECKEL: new Tile(2493, 3488, 1),
   DWELLBERRIES: new Tile(2645, 3498, 0),
   SNAPE_GRASS: new Tile(2906, 3297, 0),
-  JATIX: new Tile(2899, 3427, 0),
-  WYDIN: new Tile(3014, 3204, 0),
   SEWER_LANDING: new Tile(2562, 9737, 0),
   MUD_PILE: new Tile(2561, 9737, 0),
   SEWER_EDMOND: new Tile(2535, 9719, 0),
@@ -42479,11 +42478,11 @@ async function freeElena(log) {
 
 // src/bot/api/ai/quests/defs/plaguecity/supplies.ts
 var AEMAD = { npc: "Aemad", anchor: PC_TILE.AEMAD };
-var JATIX = { npc: "Jatix", anchor: PC_TILE.JATIX };
-var WYDIN = { npc: "Wydin", anchor: PC_TILE.WYDIN };
+var HECKEL = { npc: "Heckel Funch", anchor: PC_TILE.HECKEL };
 var ROPE_PRICE = 60;
-var PESTLE_PRICE = 40;
-var CHOCOLATE_PRICE = 60;
+var DWELLBERRY_PRICE = 10;
+var CHOCOLATE_DUST_PRICE = 20;
+var MILK_PRICE = 12;
 var PURSE = 2000;
 function withdrawFrom(items) {
   return { kind: "withdraw", items, bank: PC_TILE.BANK };
@@ -42507,7 +42506,7 @@ function fromBank(snap, item, qty) {
 function reclaim(snap, item) {
   return held(snap, item) > 0 ? null : fromBank(snap, item, 1);
 }
-var SHOPPING_NEED = ROPE_PRICE + PESTLE_PRICE + CHOCOLATE_PRICE;
+var SHOPPING_NEED = ROPE_PRICE + DWELLBERRY_PRICE + CHOCOLATE_DUST_PRICE + MILK_PRICE;
 function sourcePurse(snap, floor, blocking) {
   if (held(snap, PC_ITEM.COINS) >= floor) {
     return null;
@@ -42517,7 +42516,7 @@ function sourcePurse(snap, floor, blocking) {
   }
   const available = banked(snap, PC_ITEM.COINS);
   if (available <= 0) {
-    return blocking ? { kind: "wait", reason: "no coins banked for the rope, pestle and chocolate bar" } : null;
+    return blocking ? { kind: "wait", reason: "no coins banked for the rope and Heckel hangover kit" } : null;
   }
   return withdrawAnywhere([{ name: PC_ITEM.COINS.name, id: PC_ITEM.COINS.id, qty: Math.min(PURSE, available) }]);
 }
@@ -42560,23 +42559,15 @@ function sourceBucket(snap, qty = BUCKET_TARGET) {
   }
   return fromBank(snap, PC_ITEM.BUCKET, qty) ?? { kind: "grabGround", item: PC_ITEM.BUCKET.name, anchor: PC_TILE.BUCKET_SPAWN, waitIfMissing: true };
 }
-var sourceDwellberries = (snap) => takeSpawn(snap, PC_ITEM.DWELLBERRIES, 1, PC_TILE.DWELLBERRIES);
+var sourceDwellberries = (snap) => buyItem(snap, PC_ITEM.DWELLBERRIES, 1, HECKEL, DWELLBERRY_PRICE);
 var sourceSnapeGrass = (snap) => takeSpawn(snap, PC_ITEM.SNAPE_GRASS, 1, PC_TILE.SNAPE_GRASS);
 var sourceRope = (snap) => buyItem(snap, PC_ITEM.ROPE, 1, AEMAD, ROPE_PRICE);
-var sourcePestle = (snap) => buyItem(snap, PC_ITEM.PESTLE, 1, JATIX, PESTLE_PRICE);
-var sourceChocolateBar = (snap) => buyItem(snap, PC_ITEM.CHOCOLATE_BAR, 1, WYDIN, CHOCOLATE_PRICE);
+var sourceChocolateDust = (snap) => buyItem(snap, PC_ITEM.CHOCOLATE_DUST, 1, HECKEL, CHOCOLATE_DUST_PRICE);
 function sourceMilk(snap) {
   if (held(snap, PC_ITEM.BUCKET_MILK) > 0) {
     return null;
   }
-  return fromBank(snap, PC_ITEM.BUCKET_MILK, 1) ?? sourceBucket(snap, 1) ?? {
-    kind: "useOn",
-    item: PC_ITEM.BUCKET.name,
-    targetKind: "npc",
-    target: "Cow",
-    anchor: PC_TILE.COW_FIELD,
-    product: PC_ITEM.BUCKET_MILK.name
-  };
+  return buyItem(snap, PC_ITEM.BUCKET_MILK, 1, HECKEL, MILK_PRICE);
 }
 
 // src/bot/api/ai/quests/defs/plaguecity/index.ts
@@ -42634,18 +42625,21 @@ function waterLeg(snap, area2) {
   const more = sourceBucket(snap, BUCKET_TARGET - water2);
   return inEast(area2, more ?? { kind: "wait", reason: "no bucket for the garden soil" });
 }
-function cureLeg(snap, area2) {
+function cureNeed(snap) {
   if (held(snap, PC_ITEM.HANGOVER_CURE) > 0) {
     return null;
   }
   if (held(snap, PC_ITEM.CHOCOLATY_MILK) > 0) {
-    return inEast(area2, sourceSnapeGrass(snap) ?? mix(PC_ITEM.SNAPE_GRASS, PC_ITEM.CHOCOLATY_MILK, PC_ITEM.HANGOVER_CURE));
+    return sourceSnapeGrass(snap) ?? mix(PC_ITEM.SNAPE_GRASS, PC_ITEM.CHOCOLATY_MILK, PC_ITEM.HANGOVER_CURE);
   }
   if (held(snap, PC_ITEM.CHOCOLATE_DUST) > 0) {
-    return inEast(area2, sourceMilk(snap) ?? mix(PC_ITEM.CHOCOLATE_DUST, PC_ITEM.BUCKET_MILK, PC_ITEM.CHOCOLATY_MILK));
+    return sourceMilk(snap) ?? mix(PC_ITEM.CHOCOLATE_DUST, PC_ITEM.BUCKET_MILK, PC_ITEM.CHOCOLATY_MILK);
   }
-  const raw2 = sourceShoppingFloat(snap) ?? sourceMilk(snap) ?? sourceSnapeGrass(snap) ?? sourcePestle(snap) ?? sourceChocolateBar(snap);
-  return inEast(area2, raw2 ?? mix(PC_ITEM.PESTLE, PC_ITEM.CHOCOLATE_BAR, PC_ITEM.CHOCOLATE_DUST));
+  return sourceShoppingFloat(snap) ?? sourceChocolateDust(snap) ?? sourceMilk(snap) ?? sourceSnapeGrass(snap) ?? mix(PC_ITEM.CHOCOLATE_DUST, PC_ITEM.BUCKET_MILK, PC_ITEM.CHOCOLATY_MILK);
+}
+function cureLeg(snap, area2) {
+  const step = cureNeed(snap);
+  return step ? inEast(area2, step) : null;
 }
 function mix(item, target, product) {
   return {
@@ -42660,11 +42654,11 @@ function mix(item, target, product) {
 function stageStep(snap, area2, stage) {
   switch (stage) {
     case PC_STAGE.NOT_STARTED:
-      return inEast(area2, sourceShoppingFloat(snap) ?? custom("ask Edmond about his daughter", startQuest));
+      return inEast(area2, sourceShoppingFloat(snap) ?? sourceDwellberries(snap) ?? cureNeed(snap) ?? sourceRope(snap) ?? custom("ask Edmond about his daughter", startQuest));
     case PC_STAGE.STARTED:
-      return inEast(area2, sourceDwellberries(snap) ?? custom("give Alrena the dwellberries", giveDwellberries));
+      return inEast(area2, sourceDwellberries(snap) ?? cureNeed(snap) ?? custom("give Alrena the dwellberries", giveDwellberries));
     case PC_STAGE.GASMASK:
-      return inEast(area2, custom("ask Edmond about the way into West Ardougne", askAboutDigging));
+      return inEast(area2, sourcePicture(snap) ?? sourceSpade(snap) ?? custom("ask Edmond about the way into West Ardougne", askAboutDigging));
     case PC_STAGE.MUD_START:
       return waterLeg(snap, area2);
     case PC_STAGE.MUD_SOFT:
