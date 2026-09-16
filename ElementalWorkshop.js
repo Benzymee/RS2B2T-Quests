@@ -42452,7 +42452,7 @@ function scanBank() {
 }
 var AEMAD = { npc: "Aemad", anchor: new Tile(2613, 3294, 0) };
 var ROMMIK = { npc: "Rommik", anchor: new Tile(2949, 3205, 0) };
-var FLYNN = { npc: "Flynn", anchor: new Tile(2958, 3367, 0) };
+var GULLUCK = { npc: "Gulluck", anchor: new Tile(2468, 3487, 2) };
 var COAL_TRUCKS = new Tile(2582, 3481, 0);
 function withdraw(items) {
   return { kind: "withdraw", items, bank: SEERS_BANK };
@@ -42610,7 +42610,7 @@ function surfaceLoadout(snap, needBellowsFix, needSmelt) {
     return { kind: "buy", item: EW_ITEM.THREAD.name, qty: 1, shop: ROMMIK, estGp: 5 };
   }
   if (needSmelt && !hasWeapon(snap) && !bestBankWeapon(snap)) {
-    return { kind: "buy", item: "Bronze mace", qty: 1, shop: FLYNN, estGp: 20 };
+    return { kind: "buy", item: "Iron battleaxe", qty: 1, shop: GULLUCK, estGp: 200 };
   }
   if (!hasHeldSlashTool(snap) && !hasSlashTool(snap) && banked(snap, EW_ITEM.KNIFE.id) === 0 && !bestBankWeapon(snap)) {
     return null;
