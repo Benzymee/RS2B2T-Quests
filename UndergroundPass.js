@@ -41169,6 +41169,7 @@ var UP_ITEM = {
   SPADE: { id: 952, name: "Spade" },
   GAS_MASK: { id: 1506, name: "Gas mask" },
   SHORTBOW: { id: 841, name: "Shortbow" },
+  LONGBOW: { id: 839, name: "Longbow" },
   BRONZE_ARROW: { id: 882, name: "Bronze arrow" },
   DAMP_CLOTH: { id: 1485, name: "Damp cloth" },
   UNLIT_ARROW: { id: 598, name: "Unlit arrows" },
@@ -41281,7 +41282,8 @@ var UP_LOC = {
 var UP_TILE = {
   ARDOUGNE_BANK: new Tile(2655, 3283, 0),
   AEMAD: new Tile(2613, 3294, 0),
-  LOWE: new Tile(3231, 3421, 0),
+  CHADWELL: new Tile(2526, 3315, 0),
+  CASTLE_SPADE: new Tile(2574, 3331, 0),
   LATHAS: new Tile(2578, 3293, 1),
   CASTLE_STAIRS: new Tile(2572, 3296, 0),
   WALL_GATE_EAST: new Tile(2559, 3300, 0),
@@ -43214,10 +43216,13 @@ function bowCarried(snap) {
   return bowWorn(snap) || firstBow(snap.invIds) !== null;
 }
 var AEMAD = { npc: "Aemad", anchor: UP_TILE.AEMAD };
-var LOWE = { npc: "Lowe", anchor: UP_TILE.LOWE };
+var CHADWELL = { npc: "Chadwell", anchor: UP_TILE.CHADWELL };
 var ROPE_GP = 40;
-var BOW_GP = 100;
-var BOW_TO_BUY = UP_ITEM.SHORTBOW;
+var ARROW_GP = 10;
+var TINDERBOX_GP = 15;
+var BUCKET_GP = 15;
+var BOW_GP = 120;
+var BOW_TO_BUY = UP_ITEM.LONGBOW;
 function scanBank() {
   return { kind: "scanBank", bank: UP_TILE.ARDOUGNE_BANK };
 }
@@ -43239,12 +43244,12 @@ function fromBank(snap, item, qty) {
   return withdraw([{ name: item.name, id: item.id, qty: Math.min(qty - have2, stock) }]);
 }
 var KIT = [
-  { item: UP_ITEM.ROPE, qty: 3, reason: "the rock swing east, which eats one per attempt", shop: AEMAD, unitGp: ROPE_GP },
-  { item: UP_ITEM.BRONZE_ARROW, qty: ARROW_TARGET, reason: "the fire arrow" },
-  { item: UP_ITEM.TINDERBOX, qty: 1, reason: "lighting the cloth arrow and burning the tomb" },
-  { item: UP_ITEM.SPADE, qty: 1, reason: "the filled-in tunnel out of the slave cages" },
-  { item: UP_ITEM.BUCKET, qty: 1, reason: "the dwarf brew for Iban's tomb" },
-  { item: UP_ITEM.LOBSTER, qty: FOOD_TARGET, reason: "the demons, Kalrag and the trap falls" }
+  { item: UP_ITEM.ROPE, qty: 3, reason: "the rock swing east, which eats one per attempt", shop: AEMAD, unitGp: ROPE_GP, where: "east" },
+  { item: UP_ITEM.BRONZE_ARROW, qty: ARROW_TARGET, reason: "the fire arrow", shop: AEMAD, unitGp: ARROW_GP, where: "east" },
+  { item: UP_ITEM.TINDERBOX, qty: 1, reason: "lighting the cloth arrow and burning the tomb", shop: AEMAD, unitGp: TINDERBOX_GP, where: "east" },
+  { item: UP_ITEM.SPADE, qty: 1, reason: "the filled-in tunnel out of the slave cages", ground: UP_TILE.CASTLE_SPADE, where: "east" },
+  { item: UP_ITEM.BUCKET, qty: 1, reason: "the dwarf brew for Iban's tomb", shop: CHADWELL, unitGp: BUCKET_GP, where: "west" },
+  { item: UP_ITEM.LOBSTER, qty: FOOD_TARGET, reason: "the demons, Kalrag and the trap falls", where: "east" }
 ];
 var KEEP_IDS = [
   ...Object.values(UP_ITEM).map((item) => item.id),
@@ -43272,10 +43277,13 @@ function sourceBow(snap) {
   if (stocked !== null) {
     return withdraw([{ name: NAME_BY_ID.get(stocked) ?? BOW_TO_BUY.name, id: stocked, qty: 1 }]);
   }
-  return buyAt(snap, BOW_TO_BUY, 1, LOWE, BOW_GP);
+  return buyAt(snap, BOW_TO_BUY, 1, CHADWELL, BOW_GP);
 }
-function sourceKit(snap) {
-  for (const { item, qty, shop, unitGp } of KIT) {
+function sourceKit(snap, where) {
+  for (const { item, qty, shop, unitGp, ground, where: side } of KIT) {
+    if (side !== where) {
+      continue;
+    }
     const step = fromBank(snap, item, qty);
     if (step) {
       return step;
@@ -43286,15 +43294,31 @@ function sourceKit(snap) {
         return bought;
       }
     }
+    if (ground && carried(snap, item) < qty) {
+      return { kind: "grabGround", item: item.name, anchor: ground, waitIfMissing: true };
+    }
   }
-  return sourceBow(snap);
+  return where === "west" ? sourceBow(snap) : null;
 }
-function kitShortfall(snap) {
-  const short = KIT.filter(({ item, qty }) => carried(snap, item) < qty).map(({ item, qty, reason }) => `${qty}x ${item.name} (${reason}), have ${carried(snap, item)}`);
-  if (!bowCarried(snap)) {
-    short.push("a bow (firing the bridge stay rope), have none");
+function eastKit(snap) {
+  return sourceKit(snap, "east");
+}
+function westKit(snap) {
+  return sourceKit(snap, "west");
+}
+function kitShortfall(snap, where) {
+  const rows = where ? KIT.filter((row) => row.where === where) : KIT;
+  const short = rows.filter(({ item, qty }) => carried(snap, item) < qty).map(({ item, qty, reason }) => `${qty}x ${item.name} (${reason}), have ${carried(snap, item)}`);
+  if (!where || where === "west") {
+    if (!bowCarried(snap)) {
+      short.push("a bow (firing the bridge stay rope), have none");
+    }
   }
   return short;
+}
+function eastReady(snap) {
+  const missing = kitShortfall(snap, "east");
+  return missing.length === 0 ? null : { kind: "wait", reason: `not equipped for the pass: ${missing.join("; ")}` };
 }
 var TIERS = ["dragon", "rune", "adamant", "mithril", "black", "steel", "iron", "bronze"];
 var POISON = /\(p\+*\)$/;
@@ -45616,6 +45640,7 @@ var SPENT = [
   UP_ITEM.SPADE,
   UP_ITEM.BUCKET,
   UP_ITEM.SHORTBOW,
+  UP_ITEM.LONGBOW,
   UP_ITEM.BRONZE_ARROW,
   UP_ITEM.HISTORY
 ];
@@ -45830,13 +45855,19 @@ function flag(snap, name) {
   return snap.progress?.flags.has(name) ?? false;
 }
 function outfit(snap, area) {
-  return area === "mainland" ? sourceKit(snap) ?? wearGear(snap) : null;
+  if (area === "mainland") {
+    return eastKit(snap) ?? wearGear(snap);
+  }
+  if (area === "westardougne") {
+    return westKit(snap);
+  }
+  return null;
 }
 function inWest(snap, area, step) {
   if (area === "westardougne") {
-    return step;
+    return westKit(snap) ?? step;
   }
-  return readyToDescend(snap) ?? custom("cross the wall into West Ardougne", crossToWest);
+  return eastKit(snap) ?? wearGear(snap) ?? eastReady(snap) ?? custom("cross the wall into West Ardougne", crossToWest);
 }
 function readyToDescend(snap) {
   const missing = kitShortfall(snap);
@@ -45847,7 +45878,7 @@ function readyToDescend(snap) {
 }
 function bridgeLeg(snap, area) {
   if (area === "mainland" || area === "westardougne") {
-    return readyToDescend(snap) ?? inWest(snap, area, custom("enter the underground pass", enterCave));
+    return inWest(snap, area, readyToDescend(snap) ?? custom("enter the underground pass", enterCave));
   }
   if (area !== "area1") {
     return { kind: "wait", reason: `bridge leg reached from ${area}` };
