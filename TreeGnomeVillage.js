@@ -42456,8 +42456,9 @@ function reclaim(snap, item, earn) {
 function stageStep(snap, stage) {
   switch (stage) {
     case TG_STAGE.NOT_STARTED:
-      return { kind: "talk", stop: BOLREN };
+      return sourceAxe(snap) ?? { kind: "talk", stop: BOLREN };
     case TG_STAGE.STARTED:
+      return logsLeg(snap);
     case TG_STAGE.GAVE_LOGS:
       return { kind: "talk", stop: MONTAI };
     case TG_STAGE.SPOKEN_MONTAI:
