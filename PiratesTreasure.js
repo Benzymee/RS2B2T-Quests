@@ -41200,7 +41200,6 @@ var PT_TILE = {
   BANANA_GROVE: new Tile(2926, 3160, 0),
   WYDIN: new Tile(3014, 3204, 0),
   GROCERY_CRATE: new Tile(3009, 3207, 0),
-  THESSALIA: new Tile(3204, 3417, 0),
   PIRATE_CHEST: new Tile(3218, 3396, 1),
   SPADE_SPAWN: new Tile(2981, 3369, 0),
   DIG_SITE: new Tile(2999, 3383, 0)
@@ -41231,7 +41230,6 @@ var WYDIN = {
   leash: 6,
   prefer: ["Can I get a job here?", "No, it's a complete mess"]
 };
-var THESSALIA_SHOP = { npc: "Thessalia", anchor: PT_TILE.THESSALIA };
 var ZAMBO_SHOP = { npc: "Zambo", anchor: new Tile(2925, 3143, 0) };
 
 // src/bot/api/walking/Reach.ts
@@ -42163,7 +42161,6 @@ var COIN_TARGET = 2000;
 var COIN_LOW = 300;
 var FOOD_TARGET = 8;
 var FOOD_LOW = 3;
-var APRON_GP = 50;
 function heldId(snap, id) {
   return snap.invIds?.get(id) ?? 0;
 }
@@ -42207,7 +42204,7 @@ function kit(snap, wantApron, wantSpade) {
     return { kind: "withdraw", items };
   }
   if (needApron) {
-    return { kind: "buy", item: PT_NAME.WHITE_APRON, qty: 1, shop: THESSALIA_SHOP, estGp: APRON_GP };
+    return { kind: "grabGround", item: PT_NAME.WHITE_APRON, anchor: ANCHORS.WHITE_APRON_PORT_SARIM, waitIfMissing: true };
   }
   if (needSpade) {
     return { kind: "grabGround", item: PT_NAME.SPADE, anchor: PT_TILE.SPADE_SPAWN, waitIfMissing: true };

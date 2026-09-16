@@ -40736,9 +40736,9 @@ var QUESTS = [
     items: [
       { name: "Coins", qty: 1, kind: "mustHave" },
       { name: "Lobster pot", qty: 1, kind: "acquirable" },
+      { name: "Unfired bowl", qty: 1, kind: "acquirable" },
       { name: "Hammer", qty: 1, kind: "acquirable" },
       { name: "Wizard's mind bomb", qty: 1, kind: "acquirable" },
-      { name: "Unfired bowl", qty: 1, kind: "acquirable" },
       { name: "Silk", qty: 1, kind: "acquirable" },
       { name: "Plank", qty: 3, kind: "acquirable" }
     ]
@@ -41752,6 +41752,9 @@ function inMaze(t) {
   const basement = t.x >= 2915 && t.x <= 2945 && t.z >= 9630 && t.z <= 9665;
   return upstairs || basement;
 }
+function inOracleMine(t) {
+  return !!t && t.z >= 9800 && t.z < 9900;
+}
 function legFromPosition(t) {
   if (!inMaze(t)) {
     return 0;
@@ -42543,7 +42546,7 @@ var SUPPLY = {
 };
 var SUPPLY_LOC = {
   FOUNTAIN: new Tile(2949, 3381, 0),
-  CLAY_ROCKS: new Tile(3181, 3373, 0),
+  CLAY_ROCKS: new Tile(2986, 3239, 0),
   IRON_ROCKS: new Tile(3040, 9773, 0),
   COAL_ROCKS: new Tile(3042, 9760, 0),
   ANVIL: new Tile(3012, 9812, 0),
@@ -42701,6 +42704,10 @@ async function makeUnfiredBowl(log) {
     return true;
   }
   if (Inventory.contains(SUPPLY_ITEM.SOFT_CLAY)) {
+    if (!Inventory.contains("Wizard's mind bomb")) {
+      log("buying a mind bomb in Falador before the potter");
+      return buyMindBomb(log);
+    }
     if (!await walk2(SUPPLY_LOC.POTTERS_WHEEL, log, 1) || !await sceneLoaded()) {
       return false;
     }
@@ -42735,6 +42742,12 @@ async function makeUnfiredBowl(log) {
     }
     return Execution.delayUntil(() => Inventory.contains(SUPPLY_ITEM.SOFT_CLAY), 8000);
   }
+  if (!Inventory.contains(SUPPLY_ITEM.CLAY) && !Inventory.contains(SUPPLY_ITEM.SOFT_CLAY)) {
+    if (!await ensurePickaxe(log)) {
+      return false;
+    }
+    return mineFor(ROCKS.clay, SUPPLY_ITEM.CLAY, 1, SUPPLY_LOC.CLAY_ROCKS, log);
+  }
   if (!Inventory.contains(SUPPLY_ITEM.JUG_WATER)) {
     if (!Inventory.contains(SUPPLY_ITEM.JUG)) {
       log("buying a jug");
@@ -42745,6 +42758,10 @@ async function makeUnfiredBowl(log) {
         return false;
       }
       await Shop.buy(SUPPLY_ITEM.JUG, 1);
+      if (!Inventory.contains("Hammer")) {
+        log("buying a hammer at the same Falador counter");
+        await Shop.buy("Hammer", 1);
+      }
       await Shop.close();
       return Inventory.contains(SUPPLY_ITEM.JUG);
     }
@@ -42763,10 +42780,8 @@ async function makeUnfiredBowl(log) {
     }
     return Execution.delayUntil(() => Inventory.contains(SUPPLY_ITEM.JUG_WATER), 8000);
   }
-  if (!await ensurePickaxe(log)) {
-    return false;
-  }
-  return mineFor(ROCKS.clay, SUPPLY_ITEM.CLAY, 1, SUPPLY_LOC.CLAY_ROCKS, log);
+  log("have clay and water but neither mixed nor thrown");
+  return false;
 }
 async function smithNails(need, log) {
   if (need <= 0) {
@@ -43470,6 +43485,9 @@ function decide(snap) {
     if (inMaze(snap.tile) && anywhere(snap, DS_ID.MAP_MELZAR)) {
       return custom2("walk out of Melzar's Maze", leaveMaze);
     }
+    if (inMaze(snap.tile) && !anywhere(snap, DS_ID.MAP_MELZAR)) {
+      return custom2("Melzar's Maze", (log) => maze.step(log));
+    }
     const key = where(snap, DS_ID.MAZE_KEY);
     if (hasFlag(snap.progress, "needs-briefing")) {
       return custom2(`get the briefing from Oziach — ${describeJournal()} mazekey=${key}`, talkOziach);
@@ -43486,14 +43504,19 @@ function decide(snap) {
     if (key === "nowhere") {
       return custom2(`get the briefing from Oziach — ${describeJournal()} mazekey=${key}`, talkOziach);
     }
+    const planksHeld = snap.invIds?.get(DS_ID.PLANK) ?? 0;
+    const planksBanked = snap.bankIds?.get(DS_ID.PLANK) ?? 0;
+    if (planksHeld + planksBanked < SHIP_REPAIR.planks && !aboard(snap.tile) && !inOracleMine(snap.tile) && !onCrandor(snap.tile)) {
+      if (planksBanked > 0) {
+        return { kind: "withdraw", items: [{ name: DS_ITEM.PLANK, qty: SHIP_REPAIR.planks, id: DS_ID.PLANK }] };
+      }
+      return custom2(`fetch ${SHIP_REPAIR.planks} planks`, (log) => grabPlanks(SHIP_REPAIR.planks, log));
+    }
     const banked = bankedPieces(snap);
     if (banked.length > 0 && !heldById(DS_ID.MAP)) {
       return { kind: "withdraw", items: banked };
     }
     if (!anywhere(snap, DS_ID.MAP)) {
-      if (!anywhere(snap, DS_ID.MAP_MELZAR)) {
-        return custom2("Melzar's Maze", (log) => maze.step(log));
-      }
       if (!anywhere(snap, DS_ID.MAP_ORACLE)) {
         const holdsCharms = ORACLE_DOOR_ITEMS.every((id) => (snap.invIds?.get(id) ?? 0) > 0);
         if (holdsCharms && !hasFlag(snap.progress, "asked-oracle")) {
@@ -43508,6 +43531,9 @@ function decide(snap) {
         }
         return custom2("buy the map piece from Wormbrain", buyMapFromWormbrain);
       }
+      if (!anywhere(snap, DS_ID.MAP_MELZAR)) {
+        return custom2("Melzar's Maze", (log) => maze.step(log));
+      }
       return custom2("join the map pieces", combineMap);
     }
     if (!hasFlag(snap.progress, "has-shield") && !anywhere(snap, DS_ID.SHIELD)) {
@@ -43521,6 +43547,16 @@ function decide(snap) {
   }
   if (stage === DRAGON_STAGE.BOUGHT_SHIP) {
     const planksHeld = snap.invIds?.get(DS_ID.PLANK) ?? 0;
+    const planksBanked = snap.bankIds?.get(DS_ID.PLANK) ?? 0;
+    if (planksHeld + planksBanked < SHIP_REPAIR.planks) {
+      if (aboard(snap.tile)) {
+        return custom2("go ashore", leaveShip);
+      }
+      if (planksBanked > 0) {
+        return { kind: "withdraw", items: [{ name: DS_ITEM.PLANK, qty: SHIP_REPAIR.planks, id: DS_ID.PLANK }] };
+      }
+      return custom2(`fetch ${SHIP_REPAIR.planks} planks`, (log) => grabPlanks(SHIP_REPAIR.planks, log));
+    }
     const planksWanted = planksHeld > 0 ? planksHeld : SHIP_REPAIR.planks;
     const nailsNeeded = planksWanted * SHIP_REPAIR.nailsPerPlank;
     const nails = (snap.invIds?.get(DS_ID.NAILS) ?? 0) + (snap.bankIds?.get(DS_ID.NAILS) ?? 0);
@@ -43580,6 +43616,7 @@ function decide(snap) {
 }
 var dragonslayer = {
   record: QUESTS.find((r) => r.id === "dragon"),
+  items: () => (QUESTS.find((r) => r.id === "dragon")?.items ?? []).filter((item) => item.name !== "Plank"),
   pray: { protect: "melee", potions: 2 },
   bank: "nearest",
   grind: ["Giant rat", "Ghost", "Skeleton", "Zombie", "Melzar the mad", "Lesser demon", "Elvarg"],
