@@ -41680,7 +41680,7 @@ var CRYSTAL_STAND = new Tile(2767, 3494, 2);
 var JEWELLER_DOOR_STAND = new Tile(3016, 3247, 0);
 var BEEHIVE_STAND = new Tile(2758, 3444, 0);
 var REPELLENT_SPAWN = new Tile(2807, 3450, 0);
-var BAT_ANCHOR = new Tile(2589, 3478, 0);
+var BAT_ANCHOR = new Tile(2759, 3401, 0);
 var ARDOUGNE_BAKER = { npc: "Baker", anchor: new Tile(2669, 3310, 0) };
 var RIMMINGTON_SHOP = { npc: "Shop keeper", anchor: new Tile(2947, 3216, 0) };
 var has = (snap, name) => (snap.inv.get(name.toLowerCase()) ?? 0) > 0;

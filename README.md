@@ -113,7 +113,7 @@ Lost City revision 289 gates used by these scripts. Skill levels include ironman
 | Family Crest | 1 | — | Mining 40, Crafting 40, Smithing 40, Magic 59, Fishing 50, Cooking 45 | — | Tuna x1, Bass x1, Salmon x1, Shrimps x1, Swordfish x1, Ruby x2, Ring mould x1, Necklace mould x1, Death rune x4 |
 | Fight Arena | 2 | — | — | — | — |
 | Fishing Contest | 1 | — | Fishing 10 | — | — |
-| Gertrude's Cat | 1 | — | — | — | — |
+| Gertrude's Cat | 1 | — | — | — | Raw sardine x1, Bucket of milk x1, Doogle leaves x1 |
 | Goblin Diplomacy | 5 | — | — | — | Goblin mail x3, Orange dye x1, Blue dye x1 |
 | Hazeel Cult | 1 | — | — | — | — |
 | Hero's Quest | 1 | 55 QP | Mining 50, Herblore 25, Fishing 53, Cooking 53 | Lost City, Dragon Slayer, Merlin's Crystal, Shield of Arrav | — |
