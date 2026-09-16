@@ -40585,10 +40585,10 @@ var QUESTS = [
     questPoints: 1,
     requirements: {},
     items: [
-      { name: "Onion", qty: 1, kind: "acquirable" },
-      { name: "Rat's tail", qty: 1, kind: "acquirable" },
+      { name: "Eye of newt", qty: 1, kind: "acquirable" },
       { name: "Burnt meat", qty: 1, kind: "acquirable" },
-      { name: "Eye of newt", qty: 1, kind: "acquirable" }
+      { name: "Onion", qty: 1, kind: "acquirable" },
+      { name: "Rat's tail", qty: 1, kind: "acquirable" }
     ]
   },
   {
@@ -41538,7 +41538,7 @@ var RECORD = QUESTS.find((r) => r.id === "hetty");
 var RATS_TAIL = "Rat's tail";
 var TAIL_ID = 300;
 var TAIL_RADIUS = 12;
-var INGREDIENTS = [RATS_TAIL.toLowerCase(), "onion", "eye of newt", "burnt meat"];
+var INGREDIENTS = ["eye of newt", "burnt meat", "onion", RATS_TAIL.toLowerCase()];
 function foldItemName(name) {
   return name.trim().toLowerCase().replace(/['’`]/g, "");
 }

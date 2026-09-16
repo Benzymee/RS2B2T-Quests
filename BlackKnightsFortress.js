@@ -41671,8 +41671,9 @@ var BKF_TILE = {
   GRILL_LADDER_LOC: new Tile(3021, 3510, 0),
   GRILL: new Tile(3025, 3508, 0),
   HOLE: new Tile(3031, 3508, 1),
-  CABBAGE_FIELD: new Tile(3053, 3306, 0)
+  CABBAGE_FIELD: new Tile(3058, 3483, 0)
 };
+var REGULAR_CABBAGE_ID = 1965;
 var SECRET_WALL_ID = 2341;
 var GUARD_DOOR_ID = 2337;
 var ALREADY_LISTENED = /i can't hear much right now/i;
@@ -42144,21 +42145,24 @@ async function listenAtGrill(log) {
   listened = true;
   return false;
 }
+function regularCabbage() {
+  return Inventory.items().find((item) => item.id === REGULAR_CABBAGE_ID) ?? null;
+}
 async function dropCabbage(log) {
   const hole = Locs.query().name("Hole").within(8).nearest();
-  const cabbage = Inventory.first("Cabbage");
+  const cabbage = regularCabbage();
   if (hole && cabbage) {
-    log("dropping the cabbage down the hole");
-    const before = Inventory.count("Cabbage");
+    log("dropping the monastery cabbage down the hole");
+    const before = Inventory.countById(REGULAR_CABBAGE_ID);
     await cabbage.useOn(hole);
-    await Execution.delayUntil(() => Inventory.count("Cabbage") < before, 8000);
-    return Inventory.count("Cabbage") < before;
+    await Execution.delayUntil(() => Inventory.countById(REGULAR_CABBAGE_ID) < before, 8000);
+    return Inventory.countById(REGULAR_CABBAGE_ID) < before;
   }
   await approachInside(BKF_TILE.HOLE, log);
   return false;
 }
 async function infiltrate(log) {
-  if (!Inventory.contains("Cabbage")) {
+  if (Inventory.countById(REGULAR_CABBAGE_ID) === 0) {
     return true;
   }
   if (!await enterFortress(log)) {
@@ -42176,20 +42180,23 @@ async function infiltrate(log) {
   return dropCabbage(log);
 }
 async function pickCabbage(log) {
-  if (Inventory.contains("Cabbage")) {
+  if (Inventory.countById(REGULAR_CABBAGE_ID) > 0) {
     return true;
   }
-  const plant = Locs.query().name("Cabbage").action("Pick").within(10).nearest();
+  const here = Game.tile();
+  const atMonastery = here !== null && here.distanceTo(BKF_TILE.CABBAGE_FIELD) <= 12;
+  const plant = atMonastery ? Locs.query().name("Cabbage").action("Pick").within(10).nearest() : null;
   if (!plant) {
+    log("walking to the monastery cabbage patch on the way to the fortress");
     await Traversal.walkResilient(BKF_TILE.CABBAGE_FIELD, { radius: 4, attempts: 4, timeoutMs: 120000, log });
     return false;
   }
-  const before = Inventory.count("Cabbage");
-  log("picking a cabbage from the Draynor Manor field");
+  const before = Inventory.countById(REGULAR_CABBAGE_ID);
+  log("picking a monastery cabbage (Draynor Manor cabbage would help the witch)");
   if (!await plant.interact("Pick")) {
     return false;
   }
-  await Execution.delayUntil(() => Inventory.count("Cabbage") > before, 6000);
+  await Execution.delayUntil(() => Inventory.countById(REGULAR_CABBAGE_ID) > before, 6000);
   return false;
 }
 var blackknight = {
