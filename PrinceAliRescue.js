@@ -41624,6 +41624,12 @@ var PA_NPC = {
   KELI: "Lady Keli",
   AGGIE: "Aggie"
 };
+var HASSAN_WATER = {
+  npc: "Hassan",
+  anchor: PA_TILE.HASSAN,
+  leash: 6,
+  prefer: ["It's just too hot here. How can you stand it?"]
+};
 var HASSAN_START = {
   npc: "Hassan",
   anchor: PA_TILE.HASSAN,
@@ -42033,7 +42039,6 @@ var WOOL_SITES = {
 var BALLS_FOR_WIG = 3;
 var ONIONS_FOR_DYE = 2;
 var TINDERBOX_GP = 10;
-var SHEARS_GP = 10;
 var SKIRT_GP = 20;
 var REDBERRIES_GP = 20;
 var FLOUR_GP = 30;
@@ -42059,7 +42064,7 @@ function sourceShears(snap) {
   if (haveWig(snap) || owned(snap, PA_ITEM.BALL_OF_WOOL.id) >= BALLS_FOR_WIG) {
     return null;
   }
-  return buyItem(snap, PA_ITEM.SHEARS, 1, PA_SHOP.LUMBRIDGE, SHEARS_GP);
+  return grabItem(snap, PA_ITEM.SHEARS, PA_TILE.SHEARS_SPAWN);
 }
 function sourceOnions(snap) {
   if (haveDye(snap) || held(snap, PA_ITEM.ONION.id) >= ONIONS_FOR_DYE) {
@@ -42662,7 +42667,6 @@ var PREP = [
   sourceShears,
   sourceOnions,
   sourceWool,
-  sourcePinkSkirt,
   sourcePickaxe,
   sourceClay,
   sourcePasteGoods,
@@ -42673,6 +42677,7 @@ var PREP = [
   sourceRopes,
   makeSoftClay,
   takeKeyPrint,
+  sourcePinkSkirt,
   collectKey
 ];
 function prepLeg(snap) {
@@ -42713,6 +42718,9 @@ function decide(snap) {
   }
   switch (stage) {
     case PRINCE_STAGE.NOT_STARTED:
+      if (owned(snap, PA_ITEM.JUG_OF_WATER.id) === 0 && (snap.freeSlots === undefined || snap.freeSlots > 0)) {
+        return { kind: "talk", stop: HASSAN_WATER };
+      }
       return { kind: "talk", stop: HASSAN_START };
     case PRINCE_STAGE.STARTED:
       return { kind: "talk", stop: OSMAN_BRIEF };

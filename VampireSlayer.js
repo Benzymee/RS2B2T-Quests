@@ -41521,8 +41521,7 @@ async function climbMorganStairs(log) {
     log("Morgan's Staircase did not offer Climb-up");
     return false;
   }
-  await Execution.delayUntil(() => Game.tile()?.level === 1, 8000);
-  return false;
+  return Execution.delayUntil(() => Game.tile()?.level === 1, 8000);
 }
 async function takeGarlic(log) {
   if (Inventory.contains(GARLIC)) {
@@ -41934,6 +41933,35 @@ function sourceBankedOr(snap, name, fallback) {
   }
   return fallback();
 }
+function sourceHammer(snap) {
+  return sourceBankedOr(snap, ITEM.HAMMER, () => {
+    const coins = sourceCoins(snap);
+    return coins ?? { kind: "buy", item: ITEM.HAMMER, qty: 1, shop: VARROCK_GENERAL, estGp: 100 };
+  });
+}
+function sourceWeapon(snap) {
+  if (wornWeapon(snap))
+    return null;
+  const weapon = heldSafeWeapon(snap);
+  if (weapon)
+    return { kind: "equip", item: weapon };
+  const inBank = bankWeapon(snap);
+  if (inBank)
+    return makeSpace(snap, 1) ?? withdraw([{ name: inBank, qty: 1 }]);
+  const coins = sourceCoins(snap);
+  if (coins)
+    return coins;
+  return { kind: "buy", item: ITEM.SWORD, qty: 1, shop: VARROCK_SWORDS, estGp: 1000 };
+}
+function sourceHarlowBeer(snap) {
+  if (held(snap, ITEM.BEER) || held(snap, ITEM.STAKE) || banked(snap, ITEM.STAKE) > 0)
+    return null;
+  if (banked(snap, ITEM.BEER) > 0) {
+    return makeSpace(snap, 1) ?? withdraw([{ name: ITEM.BEER, qty: 1 }]);
+  }
+  const coins = sourceCoins(snap);
+  return coins ?? { kind: "custom", name: "buy Dr Harlow a Beer", run: buyBeer };
+}
 function heldSafeWeapon(snap) {
   return SAFE_WEAPONS.find((name) => held(snap, name)) ?? null;
 }
@@ -42127,13 +42155,8 @@ function stageTwo(snap, area) {
     if (banked(snap, ITEM.STAKE) > 0) {
       return makeSpace(snap, 1) ?? withdraw([{ name: ITEM.STAKE, qty: 1 }]);
     }
-    if (held(snap, ITEM.BEER))
-      return { kind: "talk", stop: HARLOW_STAKE };
-    if (banked(snap, ITEM.BEER) > 0) {
-      return makeSpace(snap, 1) ?? withdraw([{ name: ITEM.BEER, qty: 1 }]);
-    }
-    const coins = sourceCoins(snap);
-    return coins ?? { kind: "custom", name: "buy Dr Harlow a Beer", run: buyBeer };
+    const beer = sourceHarlowBeer(snap);
+    return beer ?? { kind: "talk", stop: HARLOW_STAKE };
   }
   const garlic = sourceBankedOr(snap, ITEM.GARLIC, () => ({
     kind: "custom",
@@ -42142,24 +42165,12 @@ function stageTwo(snap, area) {
   }));
   if (garlic)
     return garlic;
-  const hammer = sourceBankedOr(snap, ITEM.HAMMER, () => {
-    const coins = sourceCoins(snap);
-    return coins ?? { kind: "buy", item: ITEM.HAMMER, qty: 1, shop: VARROCK_GENERAL, estGp: 100 };
-  });
+  const hammer = sourceHammer(snap);
   if (hammer)
     return hammer;
-  if (!wornWeapon(snap)) {
-    const weapon = heldSafeWeapon(snap);
-    if (weapon)
-      return { kind: "equip", item: weapon };
-    const inBank = bankWeapon(snap);
-    if (inBank)
-      return makeSpace(snap, 1) ?? withdraw([{ name: inBank, qty: 1 }]);
-    const coins = sourceCoins(snap);
-    if (coins)
-      return coins;
-    return { kind: "buy", item: ITEM.SWORD, qty: 1, shop: VARROCK_SWORDS, estGp: 1000 };
-  }
+  const weapon = sourceWeapon(snap);
+  if (weapon)
+    return weapon;
   const food = sourceFood(snap);
   if (food)
     return food;
@@ -42196,7 +42207,16 @@ function decide(snap) {
       name: "take garlic from Morgan's cupboard",
       run: takeGarlic
     }));
-    return garlic ?? { kind: "talk", stop: HARLOW_FIRST };
+    if (garlic)
+      return garlic;
+    const hammer = sourceHammer(snap);
+    if (hammer)
+      return hammer;
+    const weapon = sourceWeapon(snap);
+    if (weapon)
+      return weapon;
+    const beer = sourceHarlowBeer(snap);
+    return beer ?? { kind: "talk", stop: HARLOW_FIRST };
   }
   if (snap.stage === VAMPIRE_SLAYER_STAGE.SPOKEN_TO_HARLOW)
     return stageTwo(snap, area);
