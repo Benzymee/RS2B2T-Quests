@@ -46227,7 +46227,7 @@ function preferBankWithdraw(step, snap) {
 var ARDOUGNE_STORE = { npc: "Aemad", anchor: new Tile(2613, 3293, 0) };
 var TAVERLEY_HERBLORE = { npc: "Jatix", anchor: new Tile(2899, 3428, 0) };
 var CATHERBY_ARCHERY = { npc: "Hickton", anchor: new Tile(2825, 3442, 0) };
-var COAL_ROCKS = new Tile(2581, 3480, 0);
+var COAL_ROCKS = new Tile(3042, 9760, 0);
 var ARDOUGNE_RANGE = new Tile(2648, 3298, 0);
 var FOOD_TARGET2 = FOOD_FLOAT;
 var WOOL_TARGET = 4;
