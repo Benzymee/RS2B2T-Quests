@@ -42019,7 +42019,8 @@ var HERO_NPC = {
   JATIX: 587,
   LOWE: 550,
   VALAINE: 536,
-  HORVIK: 549
+  HORVIK: 549,
+  ZENESHA: 589
 };
 var HERO_LOC = {
   TREASURE_DOOR: 2621,
@@ -42065,6 +42066,7 @@ var HERO_TILE = {
   LOWE: new Tile(3232, 3424, 0),
   LOUIE: new Tile(3316, 3176, 0),
   HORVIK: new Tile(3229, 3439, 0),
+  ZENESHA: new Tile(2653, 3295, 0),
   VALAINE: new Tile(3193, 3362, 1),
   SCAVVO: new Tile(3191, 3352, 1),
   CHAMPIONS_STAIRS: new Tile(3188, 3358, 0),
@@ -42165,6 +42167,7 @@ var GRIP = {
 var HERO_SHOP = {
   LOWE: { npc: "Lowe", anchor: HERO_TILE.LOWE },
   HORVIK: { npc: "Horvik", anchor: HERO_TILE.HORVIK },
+  ZENESHA: { npc: "Zenesha", anchor: HERO_TILE.ZENESHA },
   VALAINE: { npc: "Valaine", anchor: HERO_TILE.VALAINE },
   SCAVVO: { npc: "Scavvo", anchor: HERO_TILE.SCAVVO },
   AEMAD: { npc: "Aemad", anchor: new Tile(2613, 3294, 0) },
@@ -43546,18 +43549,24 @@ function kitStep(snap, kit) {
 }
 
 // src/bot/api/ai/quests/defs/heroquest/blackarm.ts
+var ARDOUGNE_PLATEBODY = {
+  id: HERO_ID.BLACK_PLATEBODY,
+  name: HERO_NAMED.BLACK_PLATEBODY,
+  qty: 1,
+  sources: [{ ...HERO_SHOP.ZENESHA, gp: 4500 }]
+};
 var DISGUISE = [
   {
     id: HERO_ID.BLACK_PLATEBODY,
     name: HERO_NAMED.BLACK_PLATEBODY,
     qty: 1,
-    sources: [{ ...HERO_SHOP.HORVIK, gp: 4500 }]
+    sources: [{ ...HERO_SHOP.HORVIK, gp: 4500 }, { ...HERO_SHOP.ZENESHA, gp: 4500 }]
   },
   {
     id: HERO_ID.BLACK_PLATELEGS,
     name: HERO_NAMED.BLACK_PLATELEGS,
     qty: 1,
-    sources: [{ ...HERO_SHOP.LOUIE, gp: 3000 }, { ...HERO_SHOP.VALAINE, gp: 30000 }]
+    sources: [{ ...HERO_SHOP.VALAINE, gp: 30000 }, { ...HERO_SHOP.LOUIE, gp: 3000 }]
   },
   {
     id: HERO_ID.BLACK_FULL_HELM,
@@ -43575,6 +43584,12 @@ function disguiseStep(snap) {
 }
 function disguiseOwned(snap) {
   return kitOwned(snap, DISGUISE);
+}
+function ardougnePlatebodyStep(snap) {
+  if (heroGang() !== "blackarm") {
+    return null;
+  }
+  return purchaseStep(snap, ARDOUGNE_PLATEBODY);
 }
 async function talkToTrobert(log) {
   if (!await enterBrimhavenHq(log)) {
@@ -44748,6 +44763,10 @@ function decide(snap) {
     });
   }
   if (stage === HERO_STAGE.NOT_STARTED) {
+    const plate = ardougnePlatebodyStep(snap);
+    if (plate) {
+      return egress(snap, plate);
+    }
     return {
       kind: "custom",
       name: "apply to the Heroes Guild",
