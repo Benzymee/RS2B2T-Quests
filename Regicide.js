@@ -42718,6 +42718,7 @@ var RG_ITEM = {
   TINDERBOX: { id: 590, name: "Tinderbox" },
   SPADE: { id: 952, name: "Spade" },
   SHORTBOW: { id: 841, name: "Shortbow" },
+  LONGBOW: { id: 839, name: "Longbow" },
   BRONZE_ARROW: { id: 882, name: "Bronze arrow" },
   ROPE: { id: 954, name: "Rope" },
   LOGS: { id: 1511, name: "Logs" },
@@ -46226,7 +46227,7 @@ function preferBankWithdraw(step, snap) {
 // src/bot/api/ai/quests/defs/regicide/supplies.ts
 var ARDOUGNE_STORE = { npc: "Aemad", anchor: new Tile(2613, 3293, 0) };
 var TAVERLEY_HERBLORE = { npc: "Jatix", anchor: new Tile(2899, 3428, 0) };
-var CATHERBY_ARCHERY = { npc: "Hickton", anchor: new Tile(2825, 3442, 0) };
+var WEST_STORE = { npc: "Chadwell", anchor: new Tile(2526, 3315, 0) };
 var COAL_ROCKS = new Tile(2581, 3480, 0);
 var ARDOUGNE_RANGE = new Tile(2648, 3298, 0);
 var FOOD_TARGET2 = FOOD_FLOAT;
@@ -46304,27 +46305,69 @@ var KIT2 = [
     estGp: 60
   },
   {
-    item: RG_ITEM.SHORTBOW,
+    item: RG_ITEM.LONGBOW,
     qty: 1,
-    reason: "firing the bridge stay rope; Aemad's stocks no bow",
-    shop: CATHERBY_ARCHERY,
-    estGp: 150
+    reason: "firing the bridge stay rope; Chadwell stocks a longbow on the West Ardougne walk to the pass",
+    shop: WEST_STORE,
+    estGp: 120
   },
   { item: RG_ITEM.SPADE, qty: 1, reason: "the filled-in tunnel out of the slave cages" },
   { item: RG_ITEM.SHARK, qty: FOOD_TARGET2, reason: "the traps, the soldiers and the elf warriors", min: 1 }
 ];
-var KEEP_IDS2 = Object.values(RG_ITEM).map((item) => item.id);
+var KEEP_IDS2 = [...Object.values(RG_ITEM).map((item) => item.id), ...BOW_IDS];
 var RETURN_IDS = new Set([
   RG_ITEM.SPADE.id,
   RG_ITEM.ROPE.id,
-  RG_ITEM.SHORTBOW.id,
+  RG_ITEM.LONGBOW.id,
   RG_ITEM.BRONZE_ARROW.id,
   RG_ITEM.TINDERBOX.id,
   RG_ITEM.SHARK.id
 ]);
 var RETURN_KIT = KIT2.filter((supply) => RETURN_IDS.has(supply.item.id));
+function firstBow(ids) {
+  for (const [id, n] of ids ?? []) {
+    if (n > 0 && BOW_IDS.has(id)) {
+      return id;
+    }
+  }
+  return null;
+}
+function bowWorn(snap) {
+  for (const id of snap.wornIds ?? []) {
+    if (BOW_IDS.has(id)) {
+      return true;
+    }
+  }
+  return false;
+}
+function bowCarried(snap) {
+  return bowWorn(snap) || firstBow(snap.invIds) !== null;
+}
+function isBowSupply(supply) {
+  return BOW_IDS.has(supply.item.id);
+}
+function sourceBow(snap) {
+  if (bowCarried(snap)) {
+    return null;
+  }
+  if (!snap.bankKnown) {
+    return scanBank2();
+  }
+  const stocked = firstBow(snap.bankIds);
+  if (stocked !== null) {
+    return withdraw([{ name: NAME_BY_ID.get(stocked) ?? RG_ITEM.LONGBOW.name, id: stocked, qty: 1 }]);
+  }
+  return buyOrWait(snap, { kind: "buy", item: RG_ITEM.LONGBOW.name, qty: 1, shop: WEST_STORE, estGp: 120 });
+}
 function sourceKit(snap, kit = KIT2) {
   for (const supply of kit) {
+    if (isBowSupply(supply)) {
+      const bow = sourceBow(snap);
+      if (bow) {
+        return bow;
+      }
+      continue;
+    }
     if (carried2(snap, supply.item) >= supply.qty) {
       continue;
     }
@@ -46345,7 +46388,7 @@ function sourceKit(snap, kit = KIT2) {
   return null;
 }
 function kitShortfall(snap, kit = KIT2) {
-  return kit.filter((supply) => carried2(snap, supply.item) < (supply.min ?? supply.qty)).map((supply) => `${supply.min ?? supply.qty}x ${supply.item.name} (${supply.reason}), have ${carried2(snap, supply.item)}`);
+  return kit.filter((supply) => isBowSupply(supply) ? !bowCarried(snap) : carried2(snap, supply.item) < (supply.min ?? supply.qty)).map((supply) => isBowSupply(supply) ? `1x a bow (${supply.reason}), have none` : `${supply.min ?? supply.qty}x ${supply.item.name} (${supply.reason}), have ${carried2(snap, supply.item)}`);
 }
 function sourceCoal(snap) {
   if (carried2(snap, RG_ITEM.COAL) >= COAL_TARGET) {
@@ -46575,7 +46618,7 @@ var regicide = {
         kit("spade", RG_ITEM.SPADE),
         kit("rope", RG_ITEM.ROPE),
         kit("arrows", RG_ITEM.BRONZE_ARROW),
-        kit("bow", RG_ITEM.SHORTBOW),
+        `bow=${bowCarried(snap) ? "yes" : "no"}`,
         kit("tinderbox", RG_ITEM.TINDERBOX),
         kit("coal", RG_ITEM.COAL),
         kit("rabbit", RG_ITEM.COOKED_RABBIT),
