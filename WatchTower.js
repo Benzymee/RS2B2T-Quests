@@ -43180,6 +43180,13 @@ function sourceLightSource(snap) {
   }
   return { kind: "grabGround", item: WT_ITEM.LIT_CANDLE.name, anchor: WT_TILE.CANDLE, waitIfMissing: true };
 }
+function towerCandleStep(snap, area) {
+  const candle = sourceLightSource(snap);
+  if (!candle || candle.kind === "withdraw" || candle.kind === "scanBank") {
+    return null;
+  }
+  return at(area, "yanille", candle);
+}
 var FALLBACK_FOODS = ["Tuna", "Swordfish", "Lobster"];
 function questFoods() {
   const chosen = QuestFood.name?.trim();
@@ -43513,6 +43520,12 @@ function decide(snap) {
       return { kind: "custom", name: "read the Watchtower spell scroll", run: readSpellScroll };
     }
     return { kind: "custom", name: "climb down from the activated Watchtower", run: leaveWizardFloor };
+  }
+  if (snap.stage === WATCHTOWER_STAGE.GIVEN_FINGERNAILS || snap.stage === WATCHTOWER_STAGE.MADE_RELIC) {
+    const candle = towerCandleStep(snap, area);
+    if (candle) {
+      return candle;
+    }
   }
   if (snap.stage > WATCHTOWER_STAGE.NOT_STARTED && snap.stage <= WATCHTOWER_STAGE.MADE_POTION) {
     const kit = questKit(snap, ENCLAVE_FOOD);
