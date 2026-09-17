@@ -46225,7 +46225,7 @@ function preferBankWithdraw(step, snap) {
 
 // src/bot/api/ai/quests/defs/regicide/supplies.ts
 var ARDOUGNE_STORE = { npc: "Aemad", anchor: new Tile(2613, 3293, 0) };
-var TAVERLEY_HERBLORE = { npc: "Jatix", anchor: new Tile(2899, 3428, 0) };
+var JIMINUA_STORE = { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) };
 var CATHERBY_ARCHERY = { npc: "Hickton", anchor: new Tile(2825, 3442, 0) };
 var COAL_ROCKS = new Tile(2581, 3480, 0);
 var ARDOUGNE_RANGE = new Tile(2648, 3298, 0);
@@ -46300,7 +46300,7 @@ var KIT2 = [
     item: RG_ITEM.PESTLE,
     qty: 1,
     reason: "grinding the sulphur and the quicklime",
-    shop: TAVERLEY_HERBLORE,
+    shop: JIMINUA_STORE,
     estGp: 60
   },
   {
