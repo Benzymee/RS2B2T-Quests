@@ -41775,7 +41775,8 @@ var FC_SHOP = {
   DOMMIK: { npc: "Dommik", anchor: new Tile(3322, 3194, 0) },
   GEM_MERCHANT: { npc: "Gem merchant", anchor: new Tile(2669, 3303, 0) },
   JIMINUA: { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) },
-  NURMOF: { npc: "Nurmof", anchor: new Tile(2997, 9844, 0) }
+  NURMOF: { npc: "Nurmof", anchor: new Tile(2997, 9844, 0) },
+  ALFONSE: { npc: "Alfonse the waiter", anchor: new Tile(2793, 3189, 0) }
 };
 var FC_LOC = {
   MINE_LADDER: new Tile(2696, 3282, 0),
@@ -43288,6 +43289,29 @@ var RAW = {
   BASS: { id: 363, name: "Raw bass" },
   SWORDFISH: { id: 371, name: "Raw swordfish" }
 };
+var ALFONSE_FISH_GP = 400;
+var SHOP_FISH = [
+  { id: FC_ID.SWORDFISH, name: FC_ITEM.SWORDFISH },
+  { id: FC_ID.TUNA, name: FC_ITEM.TUNA }
+];
+function sourceShopFish(snap, bank) {
+  for (const fish of SHOP_FISH) {
+    if (held(snap, fish.id) > 0) {
+      continue;
+    }
+    const fromTheBank = fromBank(snap, fish, 1, bank);
+    if (fromTheBank) {
+      return fromTheBank;
+    }
+  }
+  for (const fish of SHOP_FISH) {
+    if (held(snap, fish.id) > 0) {
+      continue;
+    }
+    return { kind: "buy", item: fish.name, qty: 1, shop: FC_SHOP.ALFONSE, estGp: ALFONSE_FISH_GP };
+  }
+  return null;
+}
 var CATCH = [
   {
     cooked: { id: FC_ID.SWORDFISH, name: FC_ITEM.SWORDFISH },
@@ -44045,7 +44069,7 @@ function decide(snap) {
     return custom("ask Avan to replace the fragment", (log) => talkToAvan(["I have lost the fragment you gave me."], log));
   }
   if (stage === FC_STAGE.NOT_STARTED) {
-    return { kind: "talk", stop: DIMINTHEIS_START };
+    return sourceShopFish(snap, FC_BANK.ARDOUGNE_EAST) ?? { kind: "talk", stop: DIMINTHEIS_START };
   }
   const fightPending = stage === FC_STAGE.CURED_JOHNATHON && held(snap, FC_ID.CREST_FROM_CHRONOZON) === 0;
   if (!fightPending) {
@@ -44056,7 +44080,7 @@ function decide(snap) {
   }
   if (stage <= FC_STAGE.CALEB_PIECE) {
     if (stage === FC_STAGE.SPOKEN_DIMINTHEIS) {
-      return { kind: "talk", stop: CALEB_START };
+      return sourceShopFish(snap, LEG_BANK.start) ?? { kind: "talk", stop: CALEB_START };
     }
     if (stage === FC_STAGE.SPOKEN_CALEB) {
       const short = missingFish(snap);
