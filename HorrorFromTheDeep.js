@@ -41590,7 +41590,8 @@ var HD_LOC = {
   WALL: "Strange wall",
   SAND_PIT: "Sand pit",
   RANGE: "Range",
-  FURNACE: "Furnace"
+  FURNACE: "Furnace",
+  ANVIL: "Anvil"
 };
 var HD_TILE = {
   CAUSEWAY_SOUTH: new Tile(2522, 3594, 0),
@@ -41629,6 +41630,7 @@ var HD_TILE = {
   SAND_PIT: new Tile(2541, 3103, 0),
   YANILLE_RANGE: new Tile(2550, 3099, 0),
   FURNACE: new Tile(2600, 3310, 0),
+  ANVIL: new Tile(2713, 3492, 0),
   VARROCK_SWORDSHOP: new Tile(3203, 3395, 0),
   VARROCK_ARCHERY: new Tile(3232, 3424, 0),
   VARROCK_RUNES: new Tile(3253, 3401, 0),
@@ -44455,6 +44457,44 @@ function planks(snap) {
   const need = PLANKS_NEEDED - held;
   return fromBank(snap, HD_ID.PLANK, HD_ITEM.PLANK, need) ?? { kind: "grabGround", item: HD_ITEM.PLANK, anchor: HD_TILE.PLANK_SPAWNS[0], waitIfMissing: true };
 }
+async function smithNailsAtSeers(log) {
+  if (Inventory.countById(HD_ID.NAILS) >= NAILS_NEEDED) {
+    return true;
+  }
+  const steel = () => Inventory.items().filter((i2) => i2.id === HD_ID.STEEL_BAR).reduce((n, i2) => n + i2.count, 0);
+  if (steel() === 0) {
+    log("no steel bars to hammer into nails");
+    return false;
+  }
+  if (Inventory.countById(HD_ID.HAMMER) === 0) {
+    log("no hammer — the Seers anvil will not answer without one");
+    return false;
+  }
+  if (!await Traversal.walkResilient(HD_TILE.ANVIL, { radius: 2, attempts: 4, timeoutMs: 300000, log })) {
+    log("could not reach the Seers anvil");
+    return false;
+  }
+  await Execution.delayTicks(2);
+  const anvil = Locs.query().name(HD_LOC.ANVIL).within(8).nearest();
+  const bar = Inventory.items().find((entry) => entry.id === HD_ID.STEEL_BAR);
+  if (!anvil || !bar) {
+    log("no anvil in reach at Seers, or no steel bar in the pack");
+    return false;
+  }
+  log(`hammering ${steel()} bars into nails at Seers`);
+  if (!await bar.useOn(anvil)) {
+    return false;
+  }
+  if (!await Execution.delayUntil(() => ChatDialog.isMainMakePanel(), 6000)) {
+    return false;
+  }
+  if (!await ChatDialog.makeFromPanelMax("Nails")) {
+    log("no Nails option on the Seers anvil panel");
+    return false;
+  }
+  await Execution.delayUntil(() => steel() === 0 || Inventory.countById(HD_ID.NAILS) >= NAILS_NEEDED, 180000);
+  return Inventory.countById(HD_ID.NAILS) >= NAILS_NEEDED;
+}
 function nails(snap) {
   const held = heldId2(snap, HD_ID.NAILS);
   const need = NAILS_NEEDED - held;
@@ -44475,8 +44515,9 @@ function nails(snap) {
     if (pick && !PICKAXES.some((p) => heldId2(snap, p.id) > 0 || (snap.wornIds?.has(p.id) ?? false))) {
       return withdraw([{ name: pick.name, qty: 1, id: pick.id }]);
     }
+    return { kind: "custom", name: `smith ${need} nails`, run: (log) => smithNails(need, log) };
   }
-  return { kind: "custom", name: `smith ${need} nails`, run: (log) => smithNails(need, log) };
+  return { kind: "custom", name: `smith ${need} nails at the Seers anvil`, run: smithNailsAtSeers };
 }
 async function useOnLocFrom(stand, itemId, locName, done, log) {
   if (done()) {
