@@ -43893,6 +43893,15 @@ function needWaterWork(snap) {
 function needFurnaceWork(snap) {
   return !hasFlag(snap.progress, EW_FLAG.FURNACE);
 }
+function oreStep(snap) {
+  if (held(snap, EW_ITEM.ELEMENTAL_ORE.id) > 0 || !needSmeltMaterials(snap)) {
+    return null;
+  }
+  if (!hasPickaxe(snap) && !bestHeldPickaxe(snap)) {
+    return custom("leave workshop for a pickaxe", leaveWorkshop);
+  }
+  return custom("mine Elemental ore from the Earth elemental", mineElementalOre);
+}
 function sourceKnife(snap) {
   if (held(snap, EW_ITEM.BATTERED_KEY.id) > 0 || hasHeldSlashTool(snap)) {
     return null;
@@ -43976,6 +43985,10 @@ function decide(snap) {
     }
     return custom("enter the Elemental Workshop", enterWorkshop);
   }
+  const ore = oreStep(snap);
+  if (ore) {
+    return ore;
+  }
   if (needWaterWork(snap)) {
     return custom("start the water wheel", startWaterWheel);
   }
@@ -43995,12 +44008,6 @@ function decide(snap) {
       return custom("search crates for a stone bowl", (log) => searchCratesFor({ bowl: true, leather: false, needle: false }, log));
     }
     return custom("light the furnace with lava", lightFurnace);
-  }
-  if (held(snap, EW_ITEM.ELEMENTAL_ORE.id) === 0) {
-    if (!hasPickaxe(snap) && !bestHeldPickaxe(snap)) {
-      return custom("leave workshop for a pickaxe", leaveWorkshop);
-    }
-    return custom("mine Elemental ore from the Earth elemental", mineElementalOre);
   }
   if (held(snap, EW_ITEM.COAL.id) < COAL_NEED) {
     return custom("leave workshop for Coal", leaveWorkshop);
