@@ -34959,6 +34959,10 @@ var SPECIAL_CROSSINGS = [
     arrivalRadius: 0,
     label: "Yanille dungeon balancing ledge (S→N)"
   },
+  { x: 2597, z: 3087, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door" },
+  { x: 2597, z: 3088, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door" },
+  { x: 2584, z: 3087, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door (west)" },
+  { x: 2584, z: 3088, level: 0, locName: "Magic guild door", action: "Open", requiresSkill: { name: "magic", level: 66 }, label: "Yanille Magic Guild door (west)" },
   {
     x: 2504,
     z: 3192,
@@ -41456,12 +41460,18 @@ var LQ_LOC_ID = {
 var LQ_BANK = {
   ARDOUGNE: new Tile(2616, 3332, 0),
   YANILLE: new Tile(2612, 3092, 0),
-  SHILO: new Tile(2852, 2954, 0)
+  SHILO: new Tile(2852, 2954, 0),
+  DRAYNOR: new Tile(3093, 3243, 0)
 };
 var LQ_SHOP = {
   JIMINUA: { npc: "Jiminua", anchor: new Tile(2767, 3122, 0) },
-  MAGIC_GUILD: { npc: "Magic Store owner", anchor: new Tile(2595, 3087, 1) }
+  MAGIC_GUILD: { npc: "Magic Store owner", anchor: new Tile(2595, 3087, 1) },
+  BETTY: { npc: "Betty", anchor: new Tile(3014, 3258, 0) }
 };
+var MAGIC_GUILD_LEVEL = 66;
+function canEnterMagicGuild() {
+  return Skills.level("magic") >= MAGIC_GUILD_LEVEL;
+}
 var LQ_TILE = {
   GUARD: new Tile(2728, 3348, 0),
   RADIMUS_STUDY: new Tile(2725, 3368, 0),
@@ -43419,7 +43429,8 @@ var COIN_CARRY = 5000;
 var COIN_FLOOR = 1000;
 var SHOP_GP = {
   JIMINUA: 3000,
-  MAGIC_GUILD: 12000
+  MAGIC_GUILD: 12000,
+  BETTY: 4000
 };
 var PRAYER_POTIONS = [
   { id: 2434, name: "Prayer potion(4)" },
@@ -43684,6 +43695,14 @@ var RUNE_KIT = [
   { item: { id: LQ_ID.EARTH_RUNE, name: LQ_ITEM.EARTH_RUNE }, qty: 1, stock: 2 },
   { item: { id: LQ_ID.LAW_RUNE, name: LQ_ITEM.LAW_RUNE }, qty: 2, stock: 4 }
 ];
+var GUILD_ONLY_RUNES = [
+  { item: { id: LQ_ID.SOUL_RUNE, name: LQ_ITEM.SOUL_RUNE }, qty: 1, stock: 2 },
+  { item: { id: LQ_ID.LAW_RUNE, name: LQ_ITEM.LAW_RUNE }, qty: 2, stock: 4 }
+];
+var BETTY_RUNE_KIT = [
+  { item: { id: LQ_ID.MIND_RUNE, name: LQ_ITEM.MIND_RUNE }, qty: 1, stock: 2 },
+  { item: { id: LQ_ID.EARTH_RUNE, name: LQ_ITEM.EARTH_RUNE }, qty: 1, stock: 2 }
+];
 var DESCENTS_STOCKED = 5;
 var ORB_RUNE_KIT = [
   { item: { id: LQ_ID.WATER_RUNE, name: LQ_ITEM.WATER_RUNE }, qty: 30, stock: 30 * DESCENTS_STOCKED }
@@ -43704,6 +43723,24 @@ function sourceFrom(snap, kit, shop, estGp, bank) {
     }
   }
   return null;
+}
+function runeShop() {
+  return canEnterMagicGuild() ? LQ_SHOP.MAGIC_GUILD : LQ_SHOP.BETTY;
+}
+function runeShopGp() {
+  return canEnterMagicGuild() ? SHOP_GP.MAGIC_GUILD : SHOP_GP.BETTY;
+}
+function runeBank() {
+  return canEnterMagicGuild() ? LEG_BANK.runes : LEG_BANK.betty;
+}
+function sourceSmellRunes(snap) {
+  if (canEnterMagicGuild()) {
+    return sourceFrom(snap, RUNE_KIT, LQ_SHOP.MAGIC_GUILD, SHOP_GP.MAGIC_GUILD, LEG_BANK.runes);
+  }
+  return sourceBankOnly(snap, GUILD_ONLY_RUNES) ?? sourceFrom(snap, BETTY_RUNE_KIT, LQ_SHOP.BETTY, SHOP_GP.BETTY, LEG_BANK.betty);
+}
+function sourceOrbRunes(snap) {
+  return sourceFrom(snap, ORB_RUNE_KIT, runeShop(), runeShopGp(), runeBank());
 }
 function sourceBankOnly(snap, kit) {
   for (const want of kit) {
@@ -43762,10 +43799,17 @@ function sourceGoldBars(snap, bank) {
   }
   return { kind: "mineRock", rock: "Gold", item: "Gold ore", qty: 1, anchor: LQ_TILE.GOLD_ROCKS };
 }
-var COUNTERS = [
-  { shop: LQ_SHOP.MAGIC_GUILD, estGp: SHOP_GP.MAGIC_GUILD, bank: LQ_BANK.YANILLE, kit: [...RUNE_KIT, ...ORB_RUNE_KIT] },
-  { shop: LQ_SHOP.JIMINUA, estGp: SHOP_GP.JIMINUA, bank: LQ_BANK.SHILO, kit: JIMINUA_KIT }
-];
+var JIMINUA_COUNTER = { shop: LQ_SHOP.JIMINUA, estGp: SHOP_GP.JIMINUA, bank: LQ_BANK.SHILO, kit: JIMINUA_KIT };
+function runeCounter() {
+  if (!canEnterMagicGuild()) {
+    return null;
+  }
+  return { shop: LQ_SHOP.MAGIC_GUILD, estGp: SHOP_GP.MAGIC_GUILD, bank: LQ_BANK.YANILLE, kit: [...RUNE_KIT, ...ORB_RUNE_KIT] };
+}
+function counters() {
+  const runes = runeCounter();
+  return runes ? [runes, JIMINUA_COUNTER] : [JIMINUA_COUNTER];
+}
 var PROVISION_GIVE_UP = 3;
 function provisionDeposit(bank) {
   return { kind: "deposit", keep: [...LQ_FOODS], keepIds: [LQ_ID.COINS], bank };
@@ -43774,7 +43818,7 @@ function provision(snap) {
   if (snap.noProgress >= PROVISION_GIVE_UP) {
     return null;
   }
-  for (const counter of COUNTERS) {
+  for (const counter of counters()) {
     const short = counter.kit.find((want) => owned(snap, want.item.id) + banked(snap, want.item.id) < want.qty);
     if (short) {
       if (!snap.bankKnown) {
@@ -43805,7 +43849,8 @@ var LQ_PROVEN_COMBAT_FLOOR = 70;
 var LEG_BANK = {
   guild: LQ_BANK.ARDOUGNE,
   karamja: LQ_BANK.SHILO,
-  runes: LQ_BANK.YANILLE
+  runes: LQ_BANK.YANILLE,
+  betty: LQ_BANK.DRAYNOR
 };
 
 // src/bot/api/ai/quests/defs/legends/fight.ts
@@ -45977,7 +46022,7 @@ function offIsland(snap, kit) {
   return legendsArea(snap.tile) === "mainland" ? kit : inTheOpen(snap, kit);
 }
 function gateKit(snap) {
-  return sourceBankOnly(snap, DESCENT_KIT) ?? sourceFrom(snap, ORB_RUNE_KIT, LQ_SHOP.MAGIC_GUILD, SHOP_GP.MAGIC_GUILD, LEG_BANK.runes) ?? sourcePickaxe(snap, LEG_BANK.karamja) ?? fromShop(snap, TRIALS_KIT);
+  return sourceBankOnly(snap, DESCENT_KIT) ?? sourceOrbRunes(snap) ?? sourcePickaxe(snap, LEG_BANK.karamja) ?? fromShop(snap, TRIALS_KIT);
 }
 var PAST_GATE = ["winchRoom", "viyeldiLedge"];
 function descentKit(snap) {
@@ -45988,7 +46033,7 @@ function descentKit(snap) {
   return offIsland(snap, gateKit(snap));
 }
 function trialsKit(snap) {
-  return sourceBankOnly(snap, BANK_ONLY_KIT) ?? sourceFrom(snap, RUNE_KIT, LQ_SHOP.MAGIC_GUILD, SHOP_GP.MAGIC_GUILD, LEG_BANK.runes) ?? sourceGems(snap, LEG_BANK.karamja) ?? fromShop(snap, TRIALS_KIT) ?? gateKit(snap);
+  return sourceBankOnly(snap, BANK_ONLY_KIT) ?? sourceSmellRunes(snap) ?? sourceGems(snap, LEG_BANK.karamja) ?? fromShop(snap, TRIALS_KIT) ?? gateKit(snap);
 }
 var FIGHT_POTS = 3;
 function upkeep(snap, food, pots = 0) {
