@@ -35060,6 +35060,18 @@ var SPECIAL_CROSSINGS = [
     label: "Brimhaven → Shilo cart"
   },
   {
+    x: 2856,
+    z: 2963,
+    level: 0,
+    locName: "Blacksmiths door",
+    action: "Open",
+    requires: { item: "Coins", count: 20 },
+    dialogue: { choose: ["Use Furnace"] },
+    toTile: { x: 2856, z: 2964, level: 0 },
+    arrivalRadius: 1,
+    label: "Yohnus Shilo furnace (20gp)"
+  },
+  {
     x: 3253,
     z: 3401,
     level: 0,
@@ -41516,7 +41528,7 @@ var LQ_TILE = {
   TALL_REEDS: new Tile(2836, 2917, 0),
   GEM_ROCKS: new Tile(2825, 2997, 0),
   GOLD_ROCKS: new Tile(2733, 3225, 0),
-  FURNACE: new Tile(2601, 3310, 0),
+  FURNACE: new Tile(2856, 2964, 0),
   ANVIL: new Tile(2790, 3102, 0),
   SNAKE_WEED: new Tile(2761, 3015, 0),
   ARDRIGAL: new Tile(2869, 3115, 0)
@@ -42357,7 +42369,7 @@ async function smeltGoldBar(log) {
     log("no gold ore to smelt");
     return false;
   }
-  if (!await Traversal.walkResilient(LQ_TILE.FURNACE, { radius: 3, attempts: 3, timeoutMs: 180000, log })) {
+  if (!await Traversal.walkResilient(LQ_TILE.FURNACE, { radius: 1, attempts: 3, timeoutMs: 180000, log })) {
     return false;
   }
   await settleScene();
@@ -43754,7 +43766,11 @@ function sourceGoldBars(snap, bank) {
     return fromTheBank;
   }
   if (heldName(snap, "Gold ore") > 0) {
-    return { kind: "custom", name: "smelt a gold bar at the Ardougne furnace", run: smeltGoldBar };
+    const coins = coinTopUp(snap, 20, bank);
+    if (coins) {
+      return coins;
+    }
+    return { kind: "custom", name: "smelt a gold bar at Yohnus' Shilo furnace", run: smeltGoldBar };
   }
   const pickaxe = sourcePickaxe(snap, bank);
   if (pickaxe) {
