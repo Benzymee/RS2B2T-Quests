@@ -43275,6 +43275,9 @@ function at(area, wanted, step) {
 function needRope(snap, area) {
   return area === "grewIsland" ? null : sourceRope(snap);
 }
+function mainlandKit(snap) {
+  return sourceRope(snap) ?? sourceVial(snap) ?? sourceGoldBar(snap);
+}
 function stageTribes(snap, area) {
   const progress = snap.progress;
   if (!hasFlag(progress, "helped-og")) {
@@ -43516,6 +43519,12 @@ function decide(snap) {
   }
   if (snap.stage > WATCHTOWER_STAGE.NOT_STARTED && snap.stage <= WATCHTOWER_STAGE.MADE_POTION) {
     const kit = questKit(snap, ENCLAVE_FOOD);
+    if (kit) {
+      return at(area, "yanille", kit);
+    }
+  }
+  if ((snap.stage ?? 0) <= WATCHTOWER_STAGE.GIVEN_RELIC) {
+    const kit = mainlandKit(snap);
     if (kit) {
       return at(area, "yanille", kit);
     }
