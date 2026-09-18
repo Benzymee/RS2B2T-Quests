@@ -41447,7 +41447,9 @@ var ER_TILE = {
   CHICKENS: new Tile(2691, 3273, 0),
   WHEAT: new Tile(2647, 3348, 0),
   TREES: new Tile(2605, 3320, 0),
-  TREES_FALADOR: new Tile(2920, 3368, 0)
+  TREES_FALADOR: new Tile(2920, 3368, 0),
+  TROLL_CAMP_FIRE: new Tile(2908, 3654, 0),
+  TREES_TROLL: new Tile(2915, 3492, 0)
 };
 var THISTLE_SPOTS = [
   new Tile(2883, 3670, 0),
@@ -43671,6 +43673,41 @@ async function pickThistle(log) {
   log("could not pick a Troll Thistle");
   return false;
 }
+function choppableTree(within) {
+  return Locs.query().where((loc) => /^(Tree|Evergreen|Dead tree)$/i.test(loc.name ?? "")).action("Chop down").within(within).nearest();
+}
+function nearbyFire(within = 12) {
+  return Locs.query().where((loc) => loc.id === FIRE_LOC).within(within).nearest();
+}
+async function chopThistleLogs(log) {
+  if (Inventory.count(ER_ITEM.LOGS.name) >= 1) {
+    return true;
+  }
+  const stands = [ER_TILE.TROLL_CAMP_FIRE, ER_TILE.TREES_TROLL];
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if (Inventory.count(ER_ITEM.LOGS.name) >= 1) {
+      return true;
+    }
+    let tree = choppableTree(12);
+    if (!tree) {
+      const stand = stands[Math.min(attempt, stands.length - 1)];
+      if (!await Traversal.walkResilient(stand, { radius: 6, attempts: 3, timeoutMs: 180000, log })) {
+        continue;
+      }
+      tree = choppableTree(12);
+    }
+    if (!tree) {
+      await Execution.delayTicks(2);
+      continue;
+    }
+    const before = Inventory.count(ER_ITEM.LOGS.name);
+    if (await tree.interact("Chop down")) {
+      await Execution.delayUntil(() => Inventory.count(ER_ITEM.LOGS.name) > before, 30000);
+    }
+  }
+  log("could not cut a log on the Trollheim descent");
+  return false;
+}
 async function dryThistle(log) {
   if (Inventory.countById(ER_ITEM.DRIED_THISTLE.id) > 0) {
     return true;
@@ -43679,29 +43716,39 @@ async function dryThistle(log) {
     log("no Troll thistle to dry");
     return false;
   }
-  const nearbyFire = () => Locs.query().where((loc) => loc.id === FIRE_LOC).within(4).nearest();
-  let fire2 = nearbyFire();
-  for (let tile = 0;!fire2 && tile < 4; tile++) {
+  let fire2 = nearbyFire(12);
+  if (!fire2) {
+    if (!await Traversal.walkResilient(ER_TILE.TROLL_CAMP_FIRE, { radius: 6, attempts: 3, timeoutMs: 180000, log })) {
+      return false;
+    }
+    fire2 = nearbyFire(12);
+  }
+  if (!fire2) {
+    if (Inventory.count(ER_ITEM.LOGS.name) < 1 && !await chopThistleLogs(log)) {
+      return false;
+    }
     const tinderbox = invById2(ER_ITEM.TINDERBOX.id);
     const logs = invById2(ER_ITEM.LOGS.id);
     if (!tinderbox || !logs) {
       log("no Tinderbox or no Logs to light a drying fire");
       return false;
     }
-    if (tile > 0) {
-      const here = Game.tile();
-      if (here) {
-        await Traversal.walkResilient(new Tile(here.x + 1, here.z + tile, here.level), { radius: 0, attempts: 2, log });
+    for (let tile = 0; !fire2 && tile < 4; tile++) {
+      if (tile > 0) {
+        const here = Game.tile();
+        if (here) {
+          await Traversal.walkResilient(new Tile(here.x + 1, here.z + tile, here.level), { radius: 0, attempts: 2, log });
+        }
       }
+      if (await tinderbox.useOn(logs)) {
+        await Execution.delayUntil(() => nearbyFire(8) !== null, 20000);
+      }
+      fire2 = nearbyFire(8);
     }
-    if (await tinderbox.useOn(logs)) {
-      await Execution.delayUntil(() => nearbyFire() !== null, 20000);
-    }
-    fire2 = nearbyFire();
   }
   const thistle = invById2(ER_ITEM.THISTLE.id);
   if (!fire2 || !thistle) {
-    log("the logs never caught — nothing on this patch would take a fire");
+    log("no troll-camp fire and the logs never caught");
     return false;
   }
   if (!await thistle.useOn(fire2)) {
@@ -43728,9 +43775,9 @@ function sourceTrollPotion(snap) {
     };
   }
   if (held(snap, ER_ITEM.THISTLE) > 0) {
-    return sourceTinderbox(snap) ?? sourceLogs(snap, 1) ?? { kind: "custom", name: "dry the thistle over a fire", run: dryThistle };
+    return sourceTinderbox(snap) ?? (held(snap, ER_ITEM.LOGS) > 0 ? null : sourceAxe(snap)) ?? { kind: "custom", name: "dry the thistle on a troll-camp fire", run: dryThistle };
   }
-  return sourceTinderbox(snap) ?? sourceLogs(snap, 1) ?? sourcePestle(snap) ?? sourceRanarrVial(snap) ?? { kind: "custom", name: "pick a Troll Thistle", run: pickThistle };
+  return sourceTinderbox(snap) ?? sourcePestle(snap) ?? sourceRanarrVial(snap) ?? { kind: "custom", name: "pick a Troll Thistle", run: pickThistle };
 }
 var EADGAR_CELL_STAND = new Tile(2833, 10082, 0);
 var EADGAR_CELL_DOOR = new Tile(2832, 10082, 0);
